@@ -13,6 +13,8 @@ namespace src
     {
         static async Task Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.Unicode;
+
             var app = new CommandApp();
             app.Configure(config =>
             {
