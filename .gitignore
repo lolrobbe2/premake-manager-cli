@@ -52,3 +52,8 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+*.sln
+*.csproj
+/.vs/premake-manager-cli/v17
+/.vs/premake-manager-cli/FileContentIndex
+/.premake/Premake 5.0-beta6/windows
