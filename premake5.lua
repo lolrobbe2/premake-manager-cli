@@ -11,28 +11,28 @@ end)
 
 
 workspace "premake-manager-cli"
+architecture "x64"
    configurations { "Debug", "Release" }
-   language "C#"
-   dotnetframework "net9.0" -- Targeting .NET 9.0
    startproject "premake-manager-cli"
 
    project "premake-manager-cli"
       kind "ConsoleApp" -- CLI application
+      dotnetframework "net9.0" -- Targeting .NET 9.0
       location "premake-manager-cli"
       language "C#"
-      dotnetsdk "Default"
       targetdir "bin/%{cfg.buildcfg}"
-      nuget { "Cocona:2.2.0" }
-      files { "src/**.cs" } -- Include all C# source files
-
+      files { "%{prj.name}/src/**.cs" } -- Include all C# source files
+      nuget { "Spectre.Console:0.50.0","Octokit:14.0.0"}
       vsprops {
          PublishSingleFile = "true",
-         SelfContained = "true"
+         SelfContained = "true",
+         IncludeNativeLibrariesForSelfExtract = "true"
       }
       filter "configurations:Debug"
          defines { "DEBUG" }
          optimize "Off"
       
       filter "configurations:Release"
+         symbols "Off"
          defines { "NDEBUG" }
          optimize "On"
