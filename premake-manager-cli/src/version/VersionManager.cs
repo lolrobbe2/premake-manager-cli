@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Octokit;
@@ -18,11 +19,13 @@ namespace src.version
         static string owner = "premake";
         static IReadOnlyList<Release>? releases;
         static string repository = "premake-core";
+        #region INSTALL_VERSIONS
         public static async Task<IReadOnlyList<Release>> GetVersions()
         {
             if (releases == null)
             {
-                releases = await AnsiConsole.Status().StartAsync("Fetching releases", async ctx => {
+                releases = await AnsiConsole.Status().StartAsync("Fetching releases", async ctx =>
+                {
                     ctx.Spinner(Spinner.Known.Aesthetic);
                     ctx.SpinnerStyle(Style.Parse("green"));
                     return await Github.Repositories.Release.GetAll(owner, repository);
@@ -30,6 +33,7 @@ namespace src.version
             }
             return releases;
         }
+
         public static async Task<Release?> GetVersion(string tagName)
         {
 
@@ -37,11 +41,12 @@ namespace src.version
         }
         public static async Task<bool> InstallRelease(string tagName)
         {
-           return await InstallRelease((await GetVersion(tagName))!);
+            return await InstallRelease((await GetVersion(tagName))!);
         }
         public static async Task<bool> InstallRelease(Release release)
         {
-            IReadOnlyList<ReleaseAsset> assets = await AnsiConsole.Status().StartAsync("Fetching releases", async ctx => {
+            IReadOnlyList<ReleaseAsset> assets = await AnsiConsole.Status().StartAsync("Fetching releases", async ctx =>
+            {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
                 return await Github.Repositories.Release.GetAllAssets(owner, repository, release.Id);
@@ -52,7 +57,7 @@ namespace src.version
                 AnsiConsole.MarkupLine($"{Spectre.Console.Emoji.Known.CrossMark}  [red]Error:[/] unable to aquire release assets!");
                 return false;
             }
-            
+
             AnsiConsole.MarkupLine($"{Spectre.Console.Emoji.Known.CheckMark}  [green]Success: Fetching Release[/]");
             string platform = GetPlatformIdentifier();
 
@@ -74,9 +79,9 @@ namespace src.version
                 ProgressTask extractTask = ctx.AddTaskAfter($"[green]extracting {release.Name}[/]", settings, downloadTask);
                 HttpClient httpClient = new HttpClient();
                 downloadTask.StartTask();
-                string destinationPath = getPremakeReleasePath(release) + releaseAsset.Name;
+                string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
 
-                string destinationDirectory = getPremakeReleasePath(release);
+                string destinationDirectory = GetPremakeReleasePath(release);
 
                 if (!Directory.Exists(destinationDirectory))
                 {
@@ -102,7 +107,7 @@ namespace src.version
                             downloadTask.Value += bytesRead;
                         }
                     }
-                    
+
                     response.EnsureSuccessStatusCode();
                 }
                 #endregion
@@ -123,7 +128,7 @@ namespace src.version
                         if (string.IsNullOrEmpty(entry.Name)) // Skip directories
                             continue;
 
-                        string destinationExtractPath = Path.Combine(getPremakeReleasePath(release), entry.FullName);
+                        string destinationExtractPath = Path.Combine(GetPremakeReleasePath(release), entry.FullName);
 
                         // Create subdirectories if needed
                         string destinationExtractDirectory = Path.GetDirectoryName(destinationExtractPath) ?? throw new ArgumentException("Invalid path.");
@@ -145,14 +150,16 @@ namespace src.version
 
 
             #endregion
+
+           await SetVersion(release.TagName);
             return true;
         }
-
+        #endregion
         public static async Task<bool> SetVersion(string tagName)
         {
             Release? release = await GetVersion(tagName);
-            string path = Environment.GetEnvironmentVariable("Path")!;
-            Console.WriteLine(path);
+            string path = GetPremakeReleasePath(release!);
+            AddPremakeToPath(path);
             return true;
         }
         private static string GetPlatformIdentifier()
@@ -170,15 +177,97 @@ namespace src.version
                     return "unknown";
             }
         }
+        #region LOCAL_VERSION_PATHS
 
-        private static string getPremakeRoamingPath()
+        /// <summary>
+        /// returns the premake AppData folder
+        /// </summary>
+        /// <returns>
+        /// string containing the premakeManger appData folder
+        /// </returns>
+        public static string GetPremakeRoamingPath()
         {
-           return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
+            return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
         }
-        
-        private static string getPremakeReleasePath(Release release)
+        private static string GetPremakeReleasePath(string tagName)
         {
-            return $"{getPremakeRoamingPath()}{release.TagName}/"; 
+            return $"{GetPremakeRoamingPath()}{tagName}/";
         }
+        private static string GetPremakeReleasePath(Release release)
+        {
+            return GetPremakeReleasePath(release.TagName);
+        }
+
+        #endregion
+
+        public static IList<string> GetPremakeInstalledVersions()
+        {
+            return Directory.GetDirectories(GetPremakeRoamingPath()).Where(x => Path.GetFileName(x)!.StartsWith('v')).ToList();
+        }
+
+
+        #region PATH_UTILITIES
+        public static void AddPremakeToPath(string premakePath)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                UpdateWindowsPath(premakePath);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                UpdateUnixPath(premakePath);
+            else
+                AnsiConsole.MarkupLine("[red]Unsupported OS for PATH modification.[/]");
+        }
+
+        // ------------------- Windows --------------------
+        private static void UpdateWindowsPath(string newPath)
+        {
+            string currentPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
+            string[] parts = currentPath.Split(';');
+
+            // Remove any existing Premake paths
+            string[] filtered = parts
+                .Where(p => !p.Contains("premake", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (filtered.Contains(newPath, StringComparer.OrdinalIgnoreCase))
+            {
+                AnsiConsole.MarkupLine("[yellow]Premake path already up-to-date in PATH.[/]");
+                return;
+            }
+
+            string updatedPath = string.Join(";", filtered.Append(newPath));
+            Environment.SetEnvironmentVariable("PATH", updatedPath, EnvironmentVariableTarget.User);
+
+            AnsiConsole.MarkupLine("[green]Updated PATH with new Premake version.[/]");
+            AnsiConsole.MarkupLine("[grey](You may need to restart your terminal.)[/]");
+        }
+
+        // ------------------- Linux/macOS --------------------
+        private static void UpdateUnixPath(string newPath)
+        {
+            string shell = Environment.GetEnvironmentVariable("SHELL") ?? "";
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string rcFile = shell.Contains("zsh") ? ".zshrc" : ".bashrc";
+            string rcPath = Path.Combine(home, rcFile);
+
+            string[] lines = File.Exists(rcPath) ? File.ReadAllLines(rcPath) : Array.Empty<string>();
+
+            // Remove old Premake paths from export lines
+            var updatedLines = lines
+                .Where(line => !line.Contains("premake", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            string exportLine = $"export PATH=\"$PATH:{newPath}\"";
+
+            // Append the new line if it's not already there
+            updatedLines.Add("# Updated by PremakeManager");
+            updatedLines.Add(exportLine);
+
+            File.WriteAllLines(rcPath, updatedLines);
+
+            AnsiConsole.MarkupLine($"[green]Updated {rcFile} with new Premake version.[/]");
+            AnsiConsole.MarkupLine($"[grey]Run [blue]source ~/{rcFile}[/] or restart your terminal.[/]");
+        }
+
+        #endregion
     }
-}
+} 

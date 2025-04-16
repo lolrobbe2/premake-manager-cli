@@ -8,20 +8,40 @@ using System.Text;
 using System.Threading.Tasks;
 using Octokit;
 using System.ComponentModel;
+using System.IO;
 #nullable enable
 namespace src.version
 {
-    public class VersionListCommand : AsyncCommand
+    public class VersionListCommand : AsyncCommand<VersionListCommand.Settings>
     {
+        public class Settings : CommandSettings
+        {
+            [CommandOption("--releases")]
+            [Description("List available releases")]
+            public bool ShowReleases { get; set; }
+
+            [CommandOption("--installed")]
+            [Description("List installed versions")]
+            public bool ShowInstalled { get; set; }
+        }
         // Execute the command
-        public override async Task<int> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            if(settings.ShowReleases)
+                await ListReleases();
+            if(settings.ShowInstalled)
+                ListInstalled();
+            
+            return 0; // Return success code
+        }
+        private async Task<int> ListReleases()
         {
             IReadOnlyList<Release> releases = await VersionManager.GetVersions();
             var table = new Table();
             table.Border = TableBorder.Rounded;
             table.AddColumn("[bold yellow]Tag Name[/]");
             table.AddColumn("[bold green]Release Name[/]");
-            table.AddColumn("[bold blue]Published At[/]");
+            table.AddColumn("[bold cyan]Published At[/]");
 
             // Add rows to the table
             foreach (var release in releases)
@@ -29,11 +49,31 @@ namespace src.version
                 table.AddRow(
                     $"[yellow]{release.TagName}[/]",
                     $"[green]{release.Name ?? "No Name"}[/]",
-                    $"[blue]{release.PublishedAt?.ToString("yyyy-MM-dd") ?? "Unknown"}[/]"
+                    $"[cyan]{release.PublishedAt?.ToString("yyyy-MM-dd") ?? "Unknown"}[/]"
                 );
             }
             AnsiConsole.Write(table);
-            return 0; // Return success code
+            return 0;
+        }
+        public void ListInstalled()
+        {
+            IList<string> installedVersions = VersionManager.GetPremakeInstalledVersions();
+            if (installedVersions == null || installedVersions.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]No installed versions found.[/]");
+                return;
+            }
+            AnsiConsole.MarkupLine($"[grey] folder: {VersionManager.GetPremakeRoamingPath()}[/]");
+            var table = new Table();
+            table.Border = TableBorder.Rounded;
+            table.AddColumn("[bold cyan]Installed Versions[/]");
+
+            foreach (string version in installedVersions)
+            {
+                table.AddRow(Path.GetFileName(version));
+            }
+
+            AnsiConsole.Write(table);
         }
     }
 
@@ -53,9 +93,21 @@ namespace src.version
         }
         public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
         {
-
             IReadOnlyList<Release> releases = VersionManager.GetVersions().ConfigureAwait(true).GetAwaiter().GetResult();
-            Release? release = releases.FirstOrDefault(release => release.TagName.Equals(settings.name));
+            Release? release = null;
+            if (settings.name == null)
+            {
+
+                string selectedTag = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                       .Title("Select a [green]Premake version[/]:")
+                       .PageSize(10)
+                       .AddChoices(releases.Select(r => r.TagName))
+                );
+
+                settings.name = selectedTag;
+            }
+            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.name));
             if (release == null)
                 return ValidationResult.Error($"Release with tag '{settings.name}' was not found. Please provide a valid release tag.");
             return ValidationResult.Success();
