@@ -27,11 +27,11 @@ namespace src.version
         // Execute the command
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            if(settings.ShowReleases)
+            if (settings.ShowReleases)
                 await ListReleases();
-            if(settings.ShowInstalled)
+            if (settings.ShowInstalled)
                 ListInstalled();
-            
+
             return 0; // Return success code
         }
         private async Task<int> ListReleases()
@@ -82,7 +82,7 @@ namespace src.version
         // Define settings for the command
         public class Settings : CommandSettings
         {
-            [CommandArgument(0,"[VERSION]")]
+            [CommandArgument(0, "[VERSION]")]
             [Description("version to install")]
             public required string name { get; set; }
         }
@@ -112,5 +112,43 @@ namespace src.version
                 return ValidationResult.Error($"Release with tag '{settings.name}' was not found. Please provide a valid release tag.");
             return ValidationResult.Success();
         }
+    }
+    public class VersionSetCommand : AsyncCommand<VersionSetCommand.Settings>
+    {
+        public class Settings : CommandSettings
+        {
+            [CommandArgument(0, "[VERSION]")]
+            [Description("version to to set in the config and PATH env variable")]
+            public required string name { get; set; }
+        }
+
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            IReadOnlyList<Release> releases = VersionManager.GetVersions().ConfigureAwait(true).GetAwaiter().GetResult();
+            Release? release = null;
+            if (settings.name == null)
+            {
+
+                string selectedTag = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                       .Title("Select a [green]Premake version[/]:")
+                       .PageSize(10)
+                       .AddChoices(releases.Select(r => r.TagName))
+                );
+
+                settings.name = selectedTag;
+            }
+            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.name));
+            if (release == null)
+                return ValidationResult.Error($"Release with tag '{settings.name}' was not found. Please provide a valid release tag.");
+            return ValidationResult.Success();
+        }
+
+        public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            await VersionManager.SetVersion(settings.name);
+            return 0;
+        }
+
     }
 }

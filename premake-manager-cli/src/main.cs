@@ -31,6 +31,9 @@ namespace src
 
                     branch.AddCommand<VersionInstallCommand>("install")
                         .WithDescription("Installs the version");
+
+                    branch.AddCommand<VersionSetCommand>("set")
+                        .WithDescription("set the premake version");
                 });
                 
             });

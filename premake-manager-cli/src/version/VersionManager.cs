@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Octokit;
 using Spectre.Console;
+using src.config;
 #nullable enable
 namespace src.version
 {
@@ -160,6 +161,11 @@ namespace src.version
             Release? release = await GetVersion(tagName);
             string path = GetPremakeReleasePath(release!);
             AddPremakeToPath(path);
+
+            ConfigReader reader = new();
+            ConfigWriter writer = ConfigWriter.FromReader(reader);
+            writer.SetVersion(tagName);
+            await writer.Write();
             return true;
         }
         private static string GetPlatformIdentifier()

@@ -14,8 +14,15 @@ namespace src.config
     /// </summary>
     internal class ConfigWriter
     {
-        private string version {  get; set; }
-        private IList<PremakeModule> modules { get; set; }
+        public string version {  get; set; }
+        public IList<PremakeModule> modules { get; set; }
+        public static ConfigWriter FromReader(ConfigReader reader)
+        {
+            ConfigWriter writer = new();
+            writer.version = reader.version;
+            writer.modules = reader.modules;
+            return writer;
+        }
         ConfigWriter()
         {
         }
@@ -63,7 +70,7 @@ namespace src.config
 
             string outputPath;
 
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrEmpty(path))
                 outputPath = Path.Combine(Directory.GetCurrentDirectory(), "premakeConfig.yml");    
             else
                 outputPath = Path.Combine(path, "premakeConfig.yml");

@@ -11,13 +11,15 @@ namespace src.config
 {
     internal class ConfigReader
     {
-        public string version { get; set; }
-        public IList<PremakeModule> modules { get; set; }
+        [YamlMember(Alias = "version")]
+        public string version { get; set; } = string.Empty;
+        [YamlMember(Alias = "modules")]
+        public IList<PremakeModule> modules { get; set; } = new List<PremakeModule>();
         public ConfigReader(string path = "")
         {
             string configPath;
 
-            if (string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrEmpty(path))
                 configPath = Path.Combine(Directory.GetCurrentDirectory(), "premakeConfig.yml");
             else
                 configPath = Path.Combine(path, "premakeConfig.yml");
@@ -26,15 +28,35 @@ namespace src.config
             string deserializedConfig = File.Exists(configPath) ? File.ReadAllText(configPath) : "";
 
             //If the desirialized config is not null or whitespace we want to read it.
-            if (!string.IsNullOrWhiteSpace(deserializedConfig))
+            if (!string.IsNullOrEmpty(deserializedConfig))
             {
                 var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(CamelCaseNamingConvention.Instance)  // see height_in_inches in sample yml 
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .IgnoreUnmatchedProperties()
                     .Build();
-               ConfigReader tempInstance = deserializer.Deserialize<ConfigReader>(deserializedConfig);
+               var tempInstance = deserializer.Deserialize<dynamic>(deserializedConfig);
+                if (tempInstance != null)
+                {
+                    //extract version
+                    version = tempInstance["version"] ?? string.Empty;
 
-               modules = tempInstance.modules;
-               version = tempInstance.version;
+                    #region EXTRACT_MODULES
+                    if (tempInstance["modules"] != null)
+                    {
+                        modules = new List<PremakeModule>();
+                        foreach (var module in tempInstance["modules"])
+                        {
+                            var premakeModule = new PremakeModule
+                            {
+                                name = module["name"] ?? string.Empty,
+                                git = module["git"] ?? string.Empty,
+                                version = module["version"] ?? string.Empty,
+                            };
+                            modules.Add(premakeModule);
+                        }
+                    }
+                    #endregion
+                }
             }
         }
     }
