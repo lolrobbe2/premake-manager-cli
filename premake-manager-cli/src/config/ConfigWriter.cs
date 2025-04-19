@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using System.IO;
+using src.modules;
 
 namespace src.config
 {
