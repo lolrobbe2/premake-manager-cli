@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace premake-manager-cli.src.modules
+namespace src.modules
 {
-    internal class ModuleCommand
-{
-}
+    internal class ModuleCommand :
+    {
+    }
 }
