@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Octokit;
 using Spectre.Console;
 using src.config;
+using src.utils;
 #nullable enable
 namespace src.version
 {
@@ -64,54 +65,17 @@ namespace src.version
 
             AnsiConsole.MarkupLine($"{Spectre.Console.Emoji.Known.DesktopComputer}  [dim white]platform: {platform}[/]");
             ReleaseAsset releaseAsset = assets!.FirstOrDefault(asset => asset.Name.Contains(platform, StringComparison.OrdinalIgnoreCase))!;
-            #region DOWNLOAD_AND_EXTRACT_PREMAKE
-            await AnsiConsole.Progress().Columns(new ProgressColumn[]
+            //DOWNLOAD_AND_EXTRACT_PREMAKE
+
+            string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
+
+            string destinationDirectory = GetPremakeReleasePath(release);
+
+            if (!Directory.Exists(destinationDirectory))
             {
-                new TaskDescriptionColumn(),
-                new ProgressBarColumn(),
-                new PercentageColumn(),
-                new DownloadedColumn(),
-                new TransferSpeedColumn()
-            }).StartAsync(async ctx =>
-            {
-                ProgressTask downloadTask = ctx.AddTask($"[green]downloading {release.Name}[/]");
-
-                ProgressTaskSettings settings = new();
-                ProgressTask extractTask = ctx.AddTaskAfter($"[green]extracting {release.Name}[/]", settings, downloadTask);
-                HttpClient httpClient = new HttpClient();
-                downloadTask.StartTask();
-                string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
-
-                string destinationDirectory = GetPremakeReleasePath(release);
-
-                if (!Directory.Exists(destinationDirectory))
-                {
-                    Directory.CreateDirectory(destinationDirectory); // Create all missing directories
-                }
-                #region DOWNLOAD_PREMAKE
-                using (HttpResponseMessage response = await httpClient.GetAsync(releaseAsset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    response.EnsureSuccessStatusCode();
-                    downloadTask.MaxValue = response.Content.Headers.ContentLength!.Value;
-                    using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
-                          fileStream = new FileStream(destinationPath, System.IO.FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        long totalBytesRead = 0;
-                        var buffer = new byte[8192]; // 8 KB buffer
-                        int bytesRead;
-
-                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                        {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-                            totalBytesRead += bytesRead;
-
-                            downloadTask.Value += bytesRead;
-                        }
-                    }
-
-                    response.EnsureSuccessStatusCode();
-                }
-                #endregion
+                Directory.CreateDirectory(destinationDirectory); // Create all missing directories
+            }
+            await DownloadUtils.DownloadProgress(releaseAsset.BrowserDownloadUrl,$"Downloading premake {releaseAsset.Name}", destinationDirectory);
 
                 #region EXTRACT_PREMAKE
                 using (ZipArchive archive = ZipFile.OpenRead(destinationPath))
@@ -147,7 +111,7 @@ namespace src.version
                 /* Delete the redundant zip folder */
                 File.Delete(destinationPath);
                 #endregion
-            });
+            
 
 
             #endregion
