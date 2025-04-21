@@ -6,45 +6,68 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using Spectre.Console;
+#nullable enable
 namespace src.utils
 {
     internal class ExtractUtils
     {
-        public static async Task ExtractZipProgress()
+        public static async Task ExtractZipProgress(string sourcePath, string destinationExtractDirectory, string description,bool deleteSource = true)
         {
-            using (ZipArchive archive = ZipFile.OpenRead(destinationPath))
+            await AnsiConsole.Progress().Columns(new ProgressColumn[]
             {
-                // Calculate the total size of all files in the archive
-                long totalUncompressedSize = 0;
-                foreach (var entry in archive.Entries)
-                    totalUncompressedSize += entry.Length;
+                            new TaskDescriptionColumn(),
+                            new ProgressBarColumn(),
+                            new PercentageColumn(),
+                            new DownloadedColumn(),
+                            new TransferSpeedColumn()
+            }).StartAsync(async ctx =>
+            {
+                ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
 
-                extractTask.MaxValue = totalUncompressedSize;
-
-                // Extract each entry while tracking the progress
-                foreach (var entry in archive.Entries)
+                ProgressTaskSettings settings = new();
+                using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
                 {
-                    if (string.IsNullOrEmpty(entry.Name)) // Skip directories
-                        continue;
+                   // Calculate the total size of all files in the archive
+                   long totalUncompressedSize = 0;
+                   foreach (var entry in archive.Entries)
+                       totalUncompressedSize += entry.Length;
 
-                    string destinationExtractPath = Path.Combine(GetPremakeReleasePath(release), entry.FullName);
+                   extractTask.MaxValue = totalUncompressedSize;
 
-                    // Create subdirectories if needed
-                    string destinationExtractDirectory = Path.GetDirectoryName(destinationExtractPath) ?? throw new ArgumentException("Invalid path.");
                     if (!Directory.Exists(destinationExtractDirectory))
                         Directory.CreateDirectory(destinationExtractDirectory);
+                    // Extract each entry while tracking the progress
 
+                    object progressLock = new object();
 
-                    // Extract the file
-                    entry.ExtractToFile(destinationExtractPath, overwrite: true);
+                    await Task.Run(() =>
+                    {
+                        Parallel.ForEach(archive.Entries, entry =>
+                        {
+                            if (string.IsNullOrEmpty(entry.Name))
+                                return;
 
-                    // Update progress based on the file size
-                    extractTask.Value += entry.Length;
+                            string destinationPath = Path.Combine(destinationExtractDirectory, entry.FullName);
+                            string? destinationDir = Path.GetDirectoryName(destinationPath);
+
+                            if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
+                                Directory.CreateDirectory(destinationDir);
+
+                            entry.ExtractToFile(destinationPath, overwrite: true);
+
+                            lock (progressLock)
+                            {
+                                extractTask.Value += entry.Length;
+                            }
+                        });
+                    });
                 }
-            }
+            });
+
             /* Delete the redundant zip folder */
-            File.Delete(destinationPath);
+            if(deleteSource)
+                File.Delete(sourcePath);
         } 
     }
 }

@@ -8,9 +8,11 @@ namespace src.modules
 {
     internal class ModuleManager
     {
+        /*
         public static Task InstallModule(PremakeModule module) 
         {
-
+           
         }
+        */
     }
 }

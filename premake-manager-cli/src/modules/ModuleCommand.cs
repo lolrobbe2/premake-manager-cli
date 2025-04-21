@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace src.modules
 {
-    internal class ModuleCommand :
+    internal class ModuleCommand 
     {
     }
 }

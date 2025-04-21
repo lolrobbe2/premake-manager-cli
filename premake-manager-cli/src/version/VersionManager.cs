@@ -69,54 +69,10 @@ namespace src.version
 
             string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
 
-            string destinationDirectory = GetPremakeReleasePath(release);
+            await DownloadUtils.DownloadProgress(releaseAsset.BrowserDownloadUrl,$"Downloading premake {releaseAsset.Name}", destinationPath);
+            await ExtractUtils.ExtractZipProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
 
-            if (!Directory.Exists(destinationDirectory))
-            {
-                Directory.CreateDirectory(destinationDirectory); // Create all missing directories
-            }
-            await DownloadUtils.DownloadProgress(releaseAsset.BrowserDownloadUrl,$"Downloading premake {releaseAsset.Name}", destinationDirectory);
-
-                #region EXTRACT_PREMAKE
-                using (ZipArchive archive = ZipFile.OpenRead(destinationPath))
-                {
-                    // Calculate the total size of all files in the archive
-                    long totalUncompressedSize = 0;
-                    foreach (var entry in archive.Entries)
-                        totalUncompressedSize += entry.Length;
-
-                    extractTask.MaxValue = totalUncompressedSize;
-
-                    // Extract each entry while tracking the progress
-                    foreach (var entry in archive.Entries)
-                    {
-                        if (string.IsNullOrEmpty(entry.Name)) // Skip directories
-                            continue;
-
-                        string destinationExtractPath = Path.Combine(GetPremakeReleasePath(release), entry.FullName);
-
-                        // Create subdirectories if needed
-                        string destinationExtractDirectory = Path.GetDirectoryName(destinationExtractPath) ?? throw new ArgumentException("Invalid path.");
-                        if (!Directory.Exists(destinationExtractDirectory))
-                            Directory.CreateDirectory(destinationExtractDirectory);
-
-
-                        // Extract the file
-                        entry.ExtractToFile(destinationExtractPath, overwrite: true);
-
-                        // Update progress based on the file size
-                        extractTask.Value += entry.Length;
-                    }
-                }
-                /* Delete the redundant zip folder */
-                File.Delete(destinationPath);
-                #endregion
-            
-
-
-            #endregion
-
-           await SetVersion(release.TagName);
+            await SetVersion(release.TagName);
             return true;
         }
         #endregion
