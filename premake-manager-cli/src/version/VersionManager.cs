@@ -68,10 +68,17 @@ namespace src.version
             //DOWNLOAD_AND_EXTRACT_PREMAKE
 
             string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
-
-            await DownloadUtils.DownloadProgress(releaseAsset.BrowserDownloadUrl,$"Downloading premake {releaseAsset.Name}", destinationPath);
-            await ExtractUtils.ExtractZipProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
-
+            await AnsiConsole.Progress().Columns(new ProgressColumn[]
+           {
+                            new TaskDescriptionColumn(),
+                            new ProgressBarColumn(),
+                            new PercentageColumn(),
+                            new DownloadedColumn(),
+                            new TransferSpeedColumn()
+           }).StartAsync(async ctx => { 
+            await DownloadUtils.DownloadProgressCtx(ctx,releaseAsset.BrowserDownloadUrl,$"Downloading premake", destinationPath);
+            await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+           });
             await SetVersion(release.TagName);
             return true;
         }
