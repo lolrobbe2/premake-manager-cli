@@ -78,11 +78,12 @@ namespace src.version
            }).StartAsync(async ctx =>
            {
                await DownloadUtils.DownloadProgressCtx(ctx,releaseAsset.BrowserDownloadUrl, $"Downloading premake {releaseAsset.Name}", destinationPath);
+               
                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                   await ExtractUtils.ExtractZipProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+                   await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, GetPremakeReleasePath(release), $"extracting premake");
                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                {
-                   await ExtractUtils.ExtractTarGzProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+                   await ExtractUtils.ExtractTarGzProgressCtx(ctx, destinationPath, GetPremakeReleasePath(release), $"extracting premake");
                    File.SetUnixFileMode(GetPremakeReleasePath(release) + "/premake5", UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.UserWrite);
                }
            });
@@ -126,8 +127,7 @@ namespace src.version
                 return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "local",
-                    "bin",
+                    "lib",
                     "premakeManager"
                 );
             else
