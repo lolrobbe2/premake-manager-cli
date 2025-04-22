@@ -87,11 +87,6 @@ namespace src.version
             Release? release = await GetVersion(tagName);
             string path = GetPremakeReleasePath(release!);
             AddPremakeToPath(path);
-
-            ConfigReader reader = new();
-            ConfigWriter writer = ConfigWriter.FromReader(reader);
-            writer.SetVersion(tagName);
-            await writer.Write();
             return true;
         }
         private static string GetPlatformIdentifier()
@@ -119,7 +114,16 @@ namespace src.version
         /// </returns>
         public static string GetPremakeRoamingPath()
         {
-            return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "local",
+                    "bin",
+                    "premakeManager"
+                );
+            else
+                return string.Empty;
         }
         private static string GetPremakeReleasePath(string tagName)
         {
