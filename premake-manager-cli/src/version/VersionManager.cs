@@ -75,9 +75,17 @@ namespace src.version
                             new PercentageColumn(),
                             new DownloadedColumn(),
                             new TransferSpeedColumn()
-           }).StartAsync(async ctx => { 
-            await DownloadUtils.DownloadProgressCtx(ctx,releaseAsset.BrowserDownloadUrl,$"Downloading premake", destinationPath);
-            await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+           }).StartAsync(async ctx =>
+           {
+               await DownloadUtils.DownloadProgressCtx(ctx,releaseAsset.BrowserDownloadUrl, $"Downloading premake {releaseAsset.Name}", destinationPath);
+               
+               if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                   await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+               else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+               {
+                   await ExtractUtils.ExtractTarGzProgressCtx(ctx, destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+                   File.SetUnixFileMode(GetPremakeReleasePath(release) + "/premake5", UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.UserWrite);
+               }
            });
             await SetVersion(release.TagName);
             return true;
@@ -88,11 +96,6 @@ namespace src.version
             Release? release = await GetVersion(tagName);
             string path = GetPremakeReleasePath(release!);
             AddPremakeToPath(path);
-
-            ConfigReader reader = new();
-            ConfigWriter writer = ConfigWriter.FromReader(reader);
-            writer.SetVersion(tagName);
-            await writer.Write();
             return true;
         }
         private static string GetPlatformIdentifier()
@@ -120,7 +123,15 @@ namespace src.version
         /// </returns>
         public static string GetPremakeRoamingPath()
         {
-            return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "lib",
+                    "premakeManager"
+                );
+            else
+                return string.Empty;
         }
         private static string GetPremakeReleasePath(string tagName)
         {
@@ -177,28 +188,34 @@ namespace src.version
         // ------------------- Linux/macOS --------------------
         private static void UpdateUnixPath(string newPath)
         {
-            string shell = Environment.GetEnvironmentVariable("SHELL") ?? "";
-            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string rcFile = shell.Contains("zsh") ? ".zshrc" : ".bashrc";
-            string rcPath = Path.Combine(home, rcFile);
+            string symlinkPath = "/usr/local/bin/premake5";
 
-            string[] lines = File.Exists(rcPath) ? File.ReadAllLines(rcPath) : Array.Empty<string>();
+            if (!File.Exists(Path.Combine(newPath,"premake5")))
+            {
+                AnsiConsole.MarkupLine($"[red]Executable not found: {Path.Combine(newPath,"premake5")}[/]");
+                return;
+            }
 
-            // Remove old Premake paths from export lines
-            var updatedLines = lines
-                .Where(line => !line.Contains("premake", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            try
+            {
+                if (File.Exists(symlinkPath))
+                    File.Delete(symlinkPath);
 
-            string exportLine = $"export PATH=\"$PATH:{newPath}\"";
-
-            // Append the new line if it's not already there
-            updatedLines.Add("# Updated by PremakeManager");
-            updatedLines.Add(exportLine);
-
-            File.WriteAllLines(rcPath, updatedLines);
-
-            AnsiConsole.MarkupLine($"[green]Updated {rcFile} with new Premake version.[/]");
-            AnsiConsole.MarkupLine($"[grey]Run [blue]source ~/{rcFile}[/] or restart your terminal.[/]");
+                File.CreateSymbolicLink(symlinkPath, newPath);
+                AnsiConsole.MarkupLine($"[green]Symlink created: {symlinkPath} → {Path.Combine(newPath, "premake5")}[/]");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                AnsiConsole.MarkupLine($"[red]Permission denied.[/] Try running with [blue]sudo[/].");
+            }
+            catch (PlatformNotSupportedException)
+            {
+                AnsiConsole.MarkupLine($"[red]Symlinks are not supported on this platform or .NET version.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Unexpected error:[/] {ex.Message}");
+            }
         }
 
         #endregion
