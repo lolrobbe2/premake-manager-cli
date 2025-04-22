@@ -70,7 +70,13 @@ namespace src.version
             string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
 
             await DownloadUtils.DownloadProgress(releaseAsset.BrowserDownloadUrl,$"Downloading premake {releaseAsset.Name}", destinationPath);
-            await ExtractUtils.ExtractZipProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                await ExtractUtils.ExtractZipProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                await ExtractUtils.ExtractTarGzProgress(destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+                File.SetUnixFileMode(GetPremakeReleasePath(release) + "/premake5", UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.UserWrite);
+            }
 
             await SetVersion(release.TagName);
             return true;
@@ -191,7 +197,7 @@ namespace src.version
             File.WriteAllLines(rcPath, updatedLines);
 
             AnsiConsole.MarkupLine($"[green]Updated {rcFile} with new Premake version.[/]");
-            AnsiConsole.MarkupLine($"[grey]Run [blue]source ~/{rcFile}[/] or restart your terminal.[/]");
+            AnsiConsole.MarkupLine($"[grey]Run [blue]source ~/{rcFile}[/] or restart your terminal session.[/]");
         }
 
         #endregion
