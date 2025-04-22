@@ -24,52 +24,12 @@ namespace src.utils
                             new TransferSpeedColumn()
             }).StartAsync(async ctx =>
             {
-                ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
-
-                ProgressTaskSettings settings = new();
-                using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
-                {
-                    // Calculate the total size of all files in the archive
-                    long totalUncompressedSize = 0;
-                    foreach (var entry in archive.Entries)
-                        totalUncompressedSize += entry.Length;
-
-                    extractTask.MaxValue = totalUncompressedSize;
-
-                    if (!Directory.Exists(destinationExtractDirectory))
-                        Directory.CreateDirectory(destinationExtractDirectory);
-                    // Extract each entry while tracking the progress
-
-                    object progressLock = new object();
-
-                    await Task.Run(() =>
-                    {
-                        Parallel.ForEach(archive.Entries, entry =>
-                        {
-                            if (string.IsNullOrEmpty(entry.Name))
-                                return;
-
-                            string destinationPath = Path.Combine(destinationExtractDirectory, entry.FullName);
-                            string? destinationDir = Path.GetDirectoryName(destinationPath);
-
-                            if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
-                                Directory.CreateDirectory(destinationDir);
-
-                            entry.ExtractToFile(destinationPath, overwrite: true);
-
-                            lock (progressLock)
-                            {
-                                extractTask.Value += entry.Length;
-                            }
-                        });
-                    });
-                }
+                await ExtractZipProgressCtx(ctx, sourcePath, destinationExtractDirectory, description, deleteSource);
             });
 
-            /* Delete the redundant zip folder */
-            if (deleteSource)
-                File.Delete(sourcePath);
         }
+
+
         public static async Task ExtractTarGzProgress(string sourcePath, string destinationExtractDirectory, string description, bool deleteSource = true)
         {
             await AnsiConsole.Progress()
@@ -141,10 +101,51 @@ namespace src.utils
                             }
                         }
                     }
+                    if (deleteSource)
+                        File.Delete(sourcePath);
                 });
-
-            if (deleteSource)
-                File.Delete(sourcePath);
         }
+
+        private static async Task ExtractZipProgressCtx(ProgressContext ctx, string sourcePath, string destinationExtractDirectory, string description, bool deleteSource = true)
+        {
+            ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
+
+            using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
+            {
+                long totalUncompressedSize = archive.Entries.Sum(e => e.Length);
+                extractTask.MaxValue = totalUncompressedSize;
+
+                if (!Directory.Exists(destinationExtractDirectory))
+                    Directory.CreateDirectory(destinationExtractDirectory);
+
+                object progressLock = new object();
+
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(archive.Entries, entry =>
+                    {
+                        if (string.IsNullOrEmpty(entry.Name))
+                            return;
+
+                        string destinationPath = Path.Combine(destinationExtractDirectory, entry.FullName);
+                        string? destinationDir = Path.GetDirectoryName(destinationPath);
+
+                        if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
+                            Directory.CreateDirectory(destinationDir);
+
+                        entry.ExtractToFile(destinationPath, overwrite: true);
+
+                        lock (progressLock)
+                        {
+                            extractTask.Value += entry.Length;
+                        }
+                    });
+                });
+                /* Delete the redundant zip folder */
+                if (deleteSource)
+                    File.Delete(sourcePath);
+            }
+        }
+
     }
 }

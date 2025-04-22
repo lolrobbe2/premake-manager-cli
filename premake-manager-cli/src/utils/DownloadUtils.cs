@@ -45,7 +45,7 @@ namespace src.utils
                 await DownloadProgressCtx(ctx, downloadUrl, description, destinationPath);
             });
         }
-        private static async Task DownloadProgressCtx(ProgressContext ctx, string downloadUrl, string description, string destinationPath)
+        public static async Task DownloadProgressCtx(ProgressContext ctx, string downloadUrl, string description, string destinationPath)
         {
             ProgressTask downloadTask = ctx.AddTask($"[green]{description}[/]");
             downloadTask.StartTask();
