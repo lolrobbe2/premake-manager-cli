@@ -35,6 +35,12 @@ namespace src
                     branch.AddCommand<VersionSetCommand>("set")
                         .WithDescription("set the premake version");
                 });
+                config.AddBranch("workspace",branch =>
+                {
+                    branch.SetDescription("Manage premake workspaces");
+                    branch.AddCommand<workspace.WorkspaceCreateCommand>("new")
+                          .WithDescription("Create a new workspace with acompanying projects");
+                });
                 
             });
 
