@@ -7,6 +7,11 @@ using System.Threading.Tasks;
 
 namespace src
 {
+    internal struct GithubRepo
+    {
+        public string owner;
+        public string name;
+    }
     internal class Github
     {
         /* Static instance of the GitHubClient */
@@ -21,5 +26,11 @@ namespace src
         // Public static property to access the instance
         public static GitHubClient Instance => _instance;
         public static IRepositoriesClient Repositories => _instance.Repository;
+
+        public static GithubRepo GetRepoFromLink(string githubLink) 
+        {
+            string[] splitLink = githubLink.Split("/");
+            return new GithubRepo { owner = splitLink[splitLink.Length - 2], name = splitLink[splitLink.Length - 1] };
+        }
     }
 }

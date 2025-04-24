@@ -41,7 +41,13 @@ namespace src
                     branch.AddCommand<workspace.WorkspaceCreateCommand>("new")
                           .WithDescription("Create a new workspace with acompanying projects");
                 });
-                
+
+                config.AddBranch("module", branch =>
+                {
+                    branch.SetDescription("Manage premake modules");
+                    branch.AddCommand<modules.ModuleInfoCommand>("info")
+                          .WithDescription("get the info from a module");
+                });
             });
 
             bool running = true;

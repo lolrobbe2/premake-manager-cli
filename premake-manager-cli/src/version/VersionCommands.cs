@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Octokit;
 using System.ComponentModel;
 using System.IO;
+using src.utils;
 #nullable enable
 namespace src.version
 {
@@ -63,7 +64,7 @@ namespace src.version
                 AnsiConsole.MarkupLine("[yellow]No installed versions found.[/]");
                 return;
             }
-            AnsiConsole.MarkupLine($"[grey] folder: {VersionManager.GetPremakeRoamingPath()}[/]");
+            AnsiConsole.MarkupLine($"[grey] folder: {PathUtils.GetRoamingPath()}[/]");
             var table = new Table();
             table.Border = TableBorder.Rounded;
             table.AddColumn("[bold cyan]Installed Versions[/]");

@@ -92,29 +92,40 @@ namespace src.utils
         {
             await AnsiConsole.Status().StartAsync(description, async ctx =>
             {
-                ctx.Spinner(Spinner.Known.Aesthetic);
-                ctx.SpinnerStyle(Style.Parse("green"));
-                HttpClient httpClient = new HttpClient();
-                using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    response.EnsureSuccessStatusCode();
-                    using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
-                          fileStream = new FileStream(destinationPath, System.IO.FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        long totalBytesRead = 0;
-                        var buffer = new byte[8192]; // 8 KB buffer
-                        int bytesRead;
-
-                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                        {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-                            totalBytesRead += bytesRead;
-                        }
-                    }
-
-                    response.EnsureSuccessStatusCode();
-                }
+                await DownloadStatusCtx(ctx, downloadUrl, destinationPath);
             });
+        }
+
+        public static async Task DownloadStatusCtx(StatusContext ctx, string downloadUrl, string destinationPath)
+        {
+            ctx.Spinner(Spinner.Known.Aesthetic);
+            ctx.SpinnerStyle(Style.Parse("green"));
+
+            destinationPath = destinationPath.Replace("\\", "/");
+            string destinationDir = Path.GetDirectoryName(destinationPath);
+            if (!Directory.Exists(destinationDir))
+                Directory.CreateDirectory(destinationDir);
+
+            HttpClient httpClient = new HttpClient();
+            using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
+            {
+                response.EnsureSuccessStatusCode();
+                using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
+                      fileStream = new FileStream(destinationPath, System.IO.FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    long totalBytesRead = 0;
+                    var buffer = new byte[8192]; // 8 KB buffer
+                    int bytesRead;
+
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    {
+                        await fileStream.WriteAsync(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+                    }
+                }
+
+                response.EnsureSuccessStatusCode();
+            }
         }
     }
 }

@@ -67,7 +67,7 @@ namespace src.version
             ReleaseAsset releaseAsset = assets!.FirstOrDefault(asset => asset.Name.Contains(platform, StringComparison.OrdinalIgnoreCase))!;
             //DOWNLOAD_AND_EXTRACT_PREMAKE
 
-            string destinationPath = GetPremakeReleasePath(release) + releaseAsset.Name;
+            string destinationPath = PathUtils.GetReleasePath(release) + releaseAsset.Name;
             await AnsiConsole.Progress().Columns(new ProgressColumn[]
            {
                             new TaskDescriptionColumn(),
@@ -80,11 +80,11 @@ namespace src.version
                await DownloadUtils.DownloadProgressCtx(ctx,releaseAsset.BrowserDownloadUrl, $"Downloading premake {releaseAsset.Name}", destinationPath);
                
                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                   await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, GetPremakeReleasePath(release), $"extracting premake");
+                   await ExtractUtils.ExtractZipProgressCtx(ctx,destinationPath, PathUtils.GetReleasePath(release), $"extracting premake");
                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                {
-                   await ExtractUtils.ExtractTarGzProgressCtx(ctx, destinationPath, GetPremakeReleasePath(release), $"extracting premake");
-                   File.SetUnixFileMode(GetPremakeReleasePath(release) + "/premake5", UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.UserWrite);
+                   await ExtractUtils.ExtractTarGzProgressCtx(ctx, destinationPath, PathUtils.GetReleasePath(release), $"extracting premake");
+                   File.SetUnixFileMode(PathUtils.GetReleasePath(release) + "/premake5", UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.UserWrite);
                }
            });
             await SetVersion(release.TagName);
@@ -94,7 +94,7 @@ namespace src.version
         public static async Task<bool> SetVersion(string tagName)
         {
             Release? release = await GetVersion(tagName);
-            string path = GetPremakeReleasePath(release!);
+            string path = PathUtils.GetReleasePath(release!);
             AddPremakeToPath(path);
             return true;
         }
@@ -115,38 +115,11 @@ namespace src.version
         }
         #region LOCAL_VERSION_PATHS
 
-        /// <summary>
-        /// returns the premake AppData folder
-        /// </summary>
-        /// <returns>
-        /// string containing the premakeManger appData folder
-        /// </returns>
-        public static string GetPremakeRoamingPath()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/premakeManager/";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "lib",
-                    "premakeManager"
-                );
-            else
-                return string.Empty;
-        }
-        private static string GetPremakeReleasePath(string tagName)
-        {
-            return $"{GetPremakeRoamingPath()}{tagName}/";
-        }
-        private static string GetPremakeReleasePath(Release release)
-        {
-            return GetPremakeReleasePath(release.TagName);
-        }
-
         #endregion
 
         public static IList<string> GetPremakeInstalledVersions()
         {
-            return Directory.GetDirectories(GetPremakeRoamingPath()).Where(x => Path.GetFileName(x)!.StartsWith('v')).ToList();
+            return Directory.GetDirectories(PathUtils.GetRoamingPath()).Where(x => Path.GetFileName(x)!.StartsWith('v')).ToList();
         }
 
 
