@@ -43,9 +43,17 @@ namespace src.utils
             return Path.Combine(GetRoamingPath(), "temp");
         }
 
-        public static string GetTempModuleInfoPath(string moduleName)
+        public static string GetTempModulePath(string moduleName)
         {
             return Path.Combine(GetTempPath(), moduleName);
+        }
+        public static void ClearDirectory(string path)
+        {
+            foreach (string dir in Directory.EnumerateDirectories(path))
+                Directory.Delete(dir, recursive: true);
+
+            foreach (string file in Directory.EnumerateFiles(path))
+                File.Delete(file);
         }
     }
 }

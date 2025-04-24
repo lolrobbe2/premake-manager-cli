@@ -47,6 +47,8 @@ namespace src.utils
 
                     if (!Directory.Exists(destinationExtractDirectory))
                         Directory.CreateDirectory(destinationExtractDirectory);
+                    else
+                        PathUtils.ClearDirectory(destinationExtractDirectory);
 
                     long totalSize = 0;
                     var entrySizes = new List<(string Name, long Size)>();
@@ -110,21 +112,36 @@ namespace src.utils
         {
             ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
 
-                ProgressTaskSettings settings = new();
-                using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
-                {
-                   // Calculate the total size of all files in the archive
-                   long totalUncompressedSize = 0;
-                   foreach (var entry in archive.Entries)
-                       totalUncompressedSize += entry.Length;
+            ProgressTaskSettings settings = new();
+            using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
+            {
+                // Calculate the total size of all files in the archive
+                long totalUncompressedSize = 0;
+                foreach (var entry in archive.Entries)
+                    totalUncompressedSize += entry.Length;
 
-                   extractTask.MaxValue = totalUncompressedSize;
+                extractTask.MaxValue = totalUncompressedSize;
 
                 if (!Directory.Exists(destinationExtractDirectory))
                     Directory.CreateDirectory(destinationExtractDirectory);
+                else
+                    PathUtils.ClearDirectory(destinationExtractDirectory);
 
                 object progressLock = new object();
+                string? commonPrefix = null;
+                if (archive.Entries.All(e => e.FullName.Contains('/')))
+                {
+                    string? firstPrefix = archive.Entries
+                        .Where(e => !string.IsNullOrEmpty(e.Name))
+                        .Select(e => e.FullName.Split('/')[0])
+                        .FirstOrDefault();
 
+                    if (!string.IsNullOrEmpty(firstPrefix) &&
+                        archive.Entries.All(e => e.FullName.StartsWith(firstPrefix + "/")))
+                    {
+                        commonPrefix = firstPrefix + "/";
+                    }
+                }
                 await Task.Run(() =>
                 {
                     Parallel.ForEach(archive.Entries, entry =>
@@ -132,7 +149,11 @@ namespace src.utils
                         if (string.IsNullOrEmpty(entry.Name))
                             return;
 
-                        string destinationPath = Path.Combine(destinationExtractDirectory, entry.FullName);
+                        string relativePath = commonPrefix != null && entry.FullName.StartsWith(commonPrefix)
+                          ? entry.FullName.Substring(commonPrefix.Length)
+                          : entry.FullName;
+
+                        string destinationPath = Path.Combine(destinationExtractDirectory, relativePath);
                         string? destinationDir = Path.GetDirectoryName(destinationPath);
 
                         if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
@@ -148,6 +169,8 @@ namespace src.utils
  
                 });
             }
+            extractTask.StopTask();
+            
             /* Delete the redundant zip folder */
             if (deleteSource)
                 File.Delete(sourcePath);

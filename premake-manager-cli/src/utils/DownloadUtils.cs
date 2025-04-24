@@ -49,7 +49,8 @@ namespace src.utils
             string destinationDir = Path.GetDirectoryName(destinationPath);
             if (!Directory.Exists(destinationDir))
                 Directory.CreateDirectory(destinationDir);
-            
+            else
+                PathUtils.ClearDirectory(destinationDir);
 
             HttpClient httpClient = new HttpClient();
 
@@ -74,6 +75,7 @@ namespace src.utils
                     }
                 }
             }
+            downloadTask.StopTask();
         }
 
         /// <summary>
@@ -100,6 +102,8 @@ namespace src.utils
             string destinationDir = Path.GetDirectoryName(destinationPath);
             if (!Directory.Exists(destinationDir))
                 Directory.CreateDirectory(destinationDir);
+            else
+                PathUtils.ClearDirectory(destinationDir);
 
             HttpClient httpClient = new HttpClient();
             using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))

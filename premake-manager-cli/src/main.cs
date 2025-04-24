@@ -1,5 +1,6 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
+using src.utils;
 using src.version;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,12 @@ namespace src
     {
         static async Task Main(string[] args)
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+            {
+                PathUtils.ClearDirectory(PathUtils.GetTempPath());
+            };
+
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             var app = new CommandApp();
             app.Configure(config =>
@@ -47,6 +53,9 @@ namespace src
                     branch.SetDescription("Manage premake modules");
                     branch.AddCommand<modules.ModuleInfoCommand>("info")
                           .WithDescription("get the info from a module");
+
+                    branch.AddCommand<modules.ModuleInstallCommand>("install")
+                          .WithDescription("install a module given its github link");
                 });
             });
 

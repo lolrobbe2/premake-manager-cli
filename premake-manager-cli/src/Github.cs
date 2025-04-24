@@ -32,5 +32,9 @@ namespace src
             string[] splitLink = githubLink.Split("/");
             return new GithubRepo { owner = splitLink[splitLink.Length - 2], name = splitLink[splitLink.Length - 1] };
         }
+        public static string FormatZipballUrl(GithubRepo repo, string refName)
+        {
+            return $"https://github.com/{repo.owner}/{repo.name}/zipball/{refName}";
+        }
     }
 }
