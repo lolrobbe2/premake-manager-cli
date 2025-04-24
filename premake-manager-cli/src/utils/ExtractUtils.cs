@@ -110,10 +110,15 @@ namespace src.utils
         {
             ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
 
-            using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
-            {
-                long totalUncompressedSize = archive.Entries.Sum(e => e.Length);
-                extractTask.MaxValue = totalUncompressedSize;
+                ProgressTaskSettings settings = new();
+                using (ZipArchive archive = ZipFile.OpenRead(sourcePath))
+                {
+                   // Calculate the total size of all files in the archive
+                   long totalUncompressedSize = 0;
+                   foreach (var entry in archive.Entries)
+                       totalUncompressedSize += entry.Length;
+
+                   extractTask.MaxValue = totalUncompressedSize;
 
                 if (!Directory.Exists(destinationExtractDirectory))
                     Directory.CreateDirectory(destinationExtractDirectory);

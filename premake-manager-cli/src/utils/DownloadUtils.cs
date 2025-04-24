@@ -19,19 +19,9 @@ namespace src.utils
         /// <param name="destinationPath">folder path to save the file in.</param>
         public static async Task DownloadProgress(string downloadUrl,string description, string destinationPath)
         {
-            await AnsiConsole.Progress().Columns(new ProgressColumn[]
-            {
-                            new TaskDescriptionColumn(),
-                            new ProgressBarColumn(),
-                            new PercentageColumn(),
-                            new DownloadedColumn(),
-                            new TransferSpeedColumn()
-            }).StartAsync(async ctx =>
-            {
-                await DownloadProgressCtx(ctx, downloadUrl, description, destinationPath);
-            });
+            await DownloadMultipleProgress(new[] { (downloadUrl, description, destinationPath) });
         }
-        public static async Task DownloadMultipleProgress(string downloadUrl, string description, string destinationPath)
+        public static async Task DownloadMultipleProgress((string url, string description, string destinationPath)[] downloads)
         {
             await AnsiConsole.Progress().Columns(new ProgressColumn[]
             {
@@ -42,7 +32,12 @@ namespace src.utils
                             new TransferSpeedColumn()
             }).StartAsync(async ctx =>
             {
-                await DownloadProgressCtx(ctx, downloadUrl, description, destinationPath);
+                List<Task> tasks = new List<Task>();
+
+                foreach (var download in downloads)
+                    tasks.Add(DownloadProgressCtx(ctx, download.url, download.description, download.destinationPath));
+                
+                await Task.WhenAll(tasks);
             });
         }
         public static async Task DownloadProgressCtx(ProgressContext ctx, string downloadUrl, string description, string destinationPath)
