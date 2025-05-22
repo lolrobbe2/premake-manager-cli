@@ -122,11 +122,6 @@ namespace src.utils
 
                 extractTask.MaxValue = totalUncompressedSize;
 
-                if (!Directory.Exists(destinationExtractDirectory))
-                    Directory.CreateDirectory(destinationExtractDirectory);
-                else
-                    PathUtils.ClearDirectory(destinationExtractDirectory);
-
                 object progressLock = new object();
                 string? commonPrefix = null;
                 if (archive.Entries.All(e => e.FullName.Contains('/')))

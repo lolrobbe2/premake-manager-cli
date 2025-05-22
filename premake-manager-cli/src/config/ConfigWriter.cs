@@ -16,7 +16,7 @@ namespace src.config
     internal class ConfigWriter
     {
         public string version {  get; set; }
-        public IList<PremakeModule> modules { get; set; }
+        public IDictionary<string,PremakeModule> modules { get; set; }
         public static ConfigWriter FromReader(ConfigReader reader)
         {
             ConfigWriter writer = new();
@@ -45,7 +45,9 @@ namespace src.config
         /// <returns></returns>
         public ConfigWriter AddModule(PremakeModule module)
         {
-            modules.Add(module);
+            if (string.IsNullOrEmpty(module.version))
+                module.version = "*";
+            modules.Add(module.module,module);
             return this;
         }
 
@@ -56,8 +58,17 @@ namespace src.config
         /// <returns></returns>
         public ConfigWriter RemoveModule(string moduleName)
         {
-            PremakeModule foundModule = modules.First(module => module.name.Equals(moduleName));
-            modules.Remove(foundModule);
+            PremakeModule foundModule = modules.First(module =>
+            {
+                if (module.Key.Equals(moduleName, StringComparison.OrdinalIgnoreCase))
+                {
+                    moduleName = module.Key;
+                    return true;
+                }
+                return false;
+            }).Value;
+            if(foundModule != null)
+                modules.Remove(moduleName);
             return this;
         }
 

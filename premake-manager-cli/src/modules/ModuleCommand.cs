@@ -1,5 +1,6 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
+using src.config;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -53,7 +54,60 @@ namespace src.modules
         }
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            await ModuleManager.InstallModule(settings.githublink,settings.version);
+            await ModuleManager.InstallModule(settings.githublink, settings.version);
+            return 0;
+        }
+    }
+
+    internal class ModuleAddCommand : AsyncCommand<ModuleAddCommand.Settings>
+    {
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "<githublink>")]
+            [Description("The GitHub link of the module or the owner/repo.")]
+            public string githublink { get; set; } = "";
+
+            [CommandArgument(1, "[version]")]
+            [Description("The version of the module")]
+            public string? version { get; set; }
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            ConfigReader config = new ConfigReader();
+            string[] moduleString = settings.githublink.Replace("https://github.com/", "").Split('/');
+            await AnsiConsole.Status().StartAsync("Adding module", async ctx =>
+            {
+                ctx.Spinner(Spinner.Known.Aesthetic);
+                ctx.SpinnerStyle(Style.Parse("green"));
+                await ConfigWriter.FromReader(config).AddModule(new PremakeModule() { owner = moduleString[0], repo = moduleString[1], version = settings.version }).Write();
+
+            });
+            return 0;
+        }
+    }
+
+    internal class ModuleRemoveCommand : AsyncCommand<ModuleRemoveCommand.Settings>
+    {
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "<githublink>")]
+            [Description("The GitHub link of the module or the owner/repo.")]
+            public string githublink { get; set; } = "";
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            ConfigReader config = new ConfigReader();
+            string moduleString = settings.githublink.Replace("https://github.com/", "");
+
+            await AnsiConsole.Status().StartAsync("Adding module", async ctx =>
+            {
+                ctx.Spinner(Spinner.Known.Aesthetic);
+                ctx.SpinnerStyle(Style.Parse("green"));
+                await ConfigWriter.FromReader(config).RemoveModule(moduleString).Write();
+            });
+
             return 0;
         }
     }

@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using YamlDotNet.Serialization;
+#nullable enable
 namespace src.modules
 {
 
@@ -17,15 +18,27 @@ namespace src.modules
     }
     internal class PremakeModule
     {
-        public string name {  get; set; }
-        public string version { get; set; }
-        public string git {  get; set; }
+        [YamlIgnore]
+        public string repo { get => getRepo(); set => setRepo(value); }
 
+        [YamlIgnore]
+        public string owner { get => getOwner(); set => setOwner(value); }
+
+        public string version { get; set; } = "*";
+
+        [YamlIgnore]
+        public string? module { get; set; } = "";
+        public PremakeModule()
+        {
+
+        }
+        public PremakeModule(string version, string module)
+        {
+            this.version = version;
+            this.module = module;
+        }
         public async Task<ModuleInfo> GetInfo() 
         {
-            string[] splitLink = git.Split("/");
-            string owner = splitLink[splitLink.Length - 1];
-            string repo = splitLink[splitLink.Length - 2];
             RepositoryContent gitRepo = await AnsiConsole.Status().StartAsync("Fetching module info", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
@@ -34,6 +47,27 @@ namespace src.modules
             });
 
             return new ModuleInfo();
+        }
+        private void setRepo(string repo)
+        {
+            this.module = $"{getOwner()}/{repo}";
+        }
+        private string getRepo()
+        {
+            if (string.IsNullOrEmpty(module))
+                return string.Empty;
+            return module.Split("/")[1] ?? string.Empty;
+        }
+        private void setOwner(string owner)
+        {
+            this.module = $"{owner}/{getRepo()}";
+        }
+
+        private string getOwner() 
+        {
+            if (string.IsNullOrEmpty(module))
+                return string.Empty;
+            return module?.Split("/")[0] ?? string.Empty;
         }
     }
 }

@@ -1,12 +1,8 @@
-﻿using System;
+﻿using src.modules;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using YamlDotNet.Serialization.NamingConventions;
-using YamlDotNet.Serialization;
 using System.IO;
-using src.modules;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace src.config
 {
@@ -15,7 +11,7 @@ namespace src.config
         [YamlMember(Alias = "version")]
         public string version { get; set; } = string.Empty;
         [YamlMember(Alias = "modules")]
-        public IList<PremakeModule> modules { get; set; } = new List<PremakeModule>();
+        public IDictionary<string, PremakeModule> modules { get; set; } = new Dictionary<string, PremakeModule>();
         public ConfigReader(string path = "")
         {
             string configPath;
@@ -24,7 +20,7 @@ namespace src.config
                 configPath = Path.Combine(Directory.GetCurrentDirectory(), "premakeConfig.yml");
             else
                 configPath = Path.Combine(path, "premakeConfig.yml");
-            
+
 
             string deserializedConfig = File.Exists(configPath) ? File.ReadAllText(configPath) : "";
 
@@ -35,28 +31,15 @@ namespace src.config
                     .WithNamingConvention(CamelCaseNamingConvention.Instance)
                     .IgnoreUnmatchedProperties()
                     .Build();
-               var tempInstance = deserializer.Deserialize<dynamic>(deserializedConfig);
+                var tempInstance = deserializer.Deserialize<dynamic>(deserializedConfig);
                 if (tempInstance != null)
                 {
                     //extract version
                     version = tempInstance["version"] ?? string.Empty;
-
-                    #region EXTRACT_MODULES
-                    if (tempInstance["modules"] != null)
-                    {
-                        modules = new List<PremakeModule>();
-                        foreach (var module in tempInstance["modules"])
-                        {
-                            var premakeModule = new PremakeModule
-                            {
-                                name = module["name"] ?? string.Empty,
-                                git = module["git"] ?? string.Empty,
-                                version = module["version"] ?? string.Empty,
-                            };
-                            modules.Add(premakeModule);
-                        }
-                    }
-                    #endregion
+                    if (tempInstance["modules"] == null)
+                        return;
+                    foreach (var module in tempInstance["modules"])
+                        modules.Add(module.Key, new PremakeModule(module.Value["version"],module.Key));     
                 }
             }
         }

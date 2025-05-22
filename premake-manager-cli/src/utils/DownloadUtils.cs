@@ -73,6 +73,7 @@ namespace src.utils
                         totalBytesRead += bytesRead;
                         downloadTask.Value += bytesRead;
                     }
+                    contentStream.Close();
                 }
             }
             downloadTask.StopTask();
@@ -122,7 +123,7 @@ namespace src.utils
                         totalBytesRead += bytesRead;
                     }
                 }
-
+                
                 response.EnsureSuccessStatusCode();
             }
         }

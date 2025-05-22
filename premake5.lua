@@ -22,7 +22,7 @@ architecture "x64"
       language "C#"
       targetdir "bin/%{cfg.buildcfg}"
       files { "%{prj.name}/src/**.cs" } -- Include all C# source files
-      nuget { "Spectre.Console:0.50.0", "Spectre.Console.Cli:0.50.0", "Octokit:14.0.0", "YamlDotNet:16.3.0" }
+      nuget { "Spectre.Console:0.50.0", "Spectre.Console.Cli:0.50.0", "Octokit:14.0.0", "YamlDotNet:16.3.0", "StreamJsonRpc:2.22.11" }
       vsprops {
          PublishSingleFile = "true",
          SelfContained = "true",

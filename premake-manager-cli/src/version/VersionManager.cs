@@ -96,6 +96,9 @@ namespace src.version
             Release? release = await GetVersion(tagName);
             string path = PathUtils.GetReleasePath(release!);
             AddPremakeToPath(path);
+            ConfigReader reader = new ConfigReader();
+            ConfigWriter configWriter = ConfigWriter.FromReader(reader);
+            configWriter.SetVersion(tagName);
             return true;
         }
         private static string GetPlatformIdentifier()

@@ -32,9 +32,8 @@ namespace src.modules
 
         public static async Task InstallModule(string githubLink, string version = "*")
         {
-            ModuleConfig config = await GetModuleConfig(githubLink);
-            GithubRepo repo = Github.GetRepoFromLink(githubLink);
-            await AnsiConsole.Progress().Columns(new ProgressColumn[]
+            
+          await AnsiConsole.Progress().Columns(new ProgressColumn[]
           {
                             new TaskDescriptionColumn(),
                             new ProgressBarColumn(),
@@ -43,10 +42,56 @@ namespace src.modules
                             new TransferSpeedColumn()
           }).StartAsync(async ctx =>
           {
-              string downloadUrl = await ResolveDownloadUrl(repo, version);
-              await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {config.name} module", Path.Combine(PathUtils.GetTempModulePath(repo.name),$"{repo.name}.zip"));
-              await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"modules/{repo.name}",$"extracting {config.name}");
+              await InstallModuleCtx(ctx, githubLink, version);
           });
+        }
+        public static async Task InstallModules(List<PremakeModule> modules)
+        {
+            var moduleTuples = modules
+                .Where(m => !string.IsNullOrWhiteSpace(m.module)) // Filter out invalid entries
+                .Select(m => (m.module!, m.version))
+                .ToList();
+            await InstallModules(moduleTuples);
+        }
+        public static async Task InstallModules(List<(string githubLink, string version)> modules)
+        {
+            await AnsiConsole.Progress().Columns(new ProgressColumn[]
+            {
+                            new TaskDescriptionColumn(),
+                            new ProgressBarColumn(),
+                            new PercentageColumn(),
+                            new DownloadedColumn(),
+                            new TransferSpeedColumn()
+            }).StartAsync(async ctx => 
+            {
+                await InstallModulesCtx(ctx, modules);
+            });
+        }
+        public static async Task InstallModuleCtx(ProgressContext ctx, string githubLink, string version = "*")
+        {
+            if (!githubLink.StartsWith("https://github.com/"))
+            {
+                string[] repoInfo = githubLink.Split('/');
+                if (repoInfo.Length == 2)
+                    githubLink = "https://github.com/" + githubLink;
+            }
+
+            if (string.IsNullOrEmpty(version))
+                version = "*";
+            ModuleConfig config = await GetModuleConfig(githubLink);
+            GithubRepo repo = Github.GetRepoFromLink(githubLink);
+
+            string downloadUrl = await ResolveDownloadUrl(repo, version);
+            await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {config.name} module", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"modules/{repo.name}", $"extracting {config.name}");
+        }
+
+        public static async Task InstallModulesCtx(ProgressContext ctx, List<(string githubLink, string version)> modules)
+        {
+            foreach (var (githubLink, version) in modules)
+            {
+                await InstallModuleCtx(ctx, githubLink, version);
+            }
         }
 
         private static async Task<string> ResolveDownloadUrl(GithubRepo repo, string version)
