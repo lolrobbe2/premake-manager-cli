@@ -69,5 +69,10 @@ namespace src.modules
                 return string.Empty;
             return module?.Split("/")[0] ?? string.Empty;
         }
+
+        public string getLink()
+        {
+            return "https://github.com/" + owner + "/" + repo;
+        }
     }
 }

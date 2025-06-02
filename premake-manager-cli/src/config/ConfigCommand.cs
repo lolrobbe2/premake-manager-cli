@@ -19,6 +19,7 @@ namespace src.config
         public async override Task<int> ExecuteAsync(CommandContext context)
         {
             ConfigReader config = new ConfigReader();
+            //TODO should we auto install the correct version of premake?
             await VersionManager.SetVersion(config.version);
             await ModuleManager.InstallModules(config.modules.Values.ToList());
             return 0;
@@ -36,6 +37,10 @@ namespace src.config
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
             await VersionManager.SetVersion(settings.name);
+            ConfigReader reader = new ConfigReader();
+            ConfigWriter writer = ConfigWriter.FromReader(reader);
+            writer.SetVersion(settings.name);
+            await writer.Write();
             return 0;
         }
 

@@ -57,6 +57,21 @@ namespace src.modules
             await ModuleManager.InstallModule(settings.githublink, settings.version);
             return 0;
         }
+
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            if (!settings.githublink.StartsWith("https://github.com/"))
+                return ValidationResult.Error("the link should start with https://github.com/");
+            GithubRepo repo = Github.GetRepoFromLink(settings.githublink);
+            if (string.IsNullOrEmpty(repo.owner))
+                return ValidationResult.Error("the repo owner name should be valid");
+
+            if (string.IsNullOrEmpty(repo.name))
+                return ValidationResult.Error("the repo name name should be valid");
+
+            return ValidationResult.Success();
+
+        }
     }
 
     internal class ModuleAddCommand : AsyncCommand<ModuleAddCommand.Settings>
@@ -91,17 +106,44 @@ namespace src.modules
     {
         internal class Settings : CommandSettings
         {
-            [CommandArgument(0, "<githublink>")]
+            [CommandArgument(0, "[githublink]")]
             [Description("The GitHub link of the module or the owner/repo.")]
-            public string githublink { get; set; } = "";
+            public string? githublink { get; set; } = "";
+        }
+
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            if (string.IsNullOrEmpty(settings.githublink)) {
+                ConfigReader reader = new ConfigReader();
+                IList<PremakeModule> modules = reader.modules.Values.ToList();
+                string selectedLink = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                       .Title("Select a [green]Module to remove[/]:")
+                       .PageSize(10)
+                       .AddChoices(modules.Select(m => m.getLink()))
+                );
+                settings.githublink = selectedLink;
+            } else {
+                if (!settings.githublink.StartsWith("https://github.com/"))
+                    return ValidationResult.Error("the link should start with https://github.com/");
+                GithubRepo repo = Github.GetRepoFromLink(settings.githublink);
+                if (string.IsNullOrEmpty(repo.owner))
+                    return ValidationResult.Error("the repo owner name should be valid");
+
+                if (string.IsNullOrEmpty(repo.name))
+                    return ValidationResult.Error("the repo name name should be valid");
+
+            }
+            return ValidationResult.Success();
+
         }
 
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
             ConfigReader config = new ConfigReader();
-            string moduleString = settings.githublink.Replace("https://github.com/", "");
+            string moduleString = settings.githublink!.Replace("https://github.com/", "");
 
-            await AnsiConsole.Status().StartAsync("Adding module", async ctx =>
+            await AnsiConsole.Status().StartAsync("Removing Module", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));

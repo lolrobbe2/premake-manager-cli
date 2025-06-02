@@ -13,6 +13,7 @@ namespace src.modules
     internal class ModuleManager
     {
 
+
         public static async Task<ModuleConfig> GetModuleConfig(string githubLink)
         {
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
@@ -53,6 +54,7 @@ namespace src.modules
                 .ToList();
             await InstallModules(moduleTuples);
         }
+
         public static async Task InstallModules(List<(string githubLink, string version)> modules)
         {
             await AnsiConsole.Progress().Columns(new ProgressColumn[]
