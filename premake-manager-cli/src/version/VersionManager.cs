@@ -193,7 +193,23 @@ namespace src.version
                 AnsiConsole.MarkupLine($"[red]Unexpected error:[/] {ex.Message}");
             }
         }
+        public string? GetCurrentWindowsPath()
+        {
+            string currentPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
+            string[] parts = currentPath.Split(';');
 
+            // Remove any existing Premake paths
+            string[] filtered = parts
+                .Where(p => p.Contains("premake", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if( filtered.Length == 0 )
+                return null;
+
+            return filtered.First();
+        }
         #endregion
     }
+
+   
 } 

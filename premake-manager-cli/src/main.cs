@@ -15,7 +15,11 @@ namespace src
     {
         static async Task Main(string[] args)
         {
+#if DEBUG
             bool interactive = true;
+#else
+            bool interactive = false;
+#endif
             if (args.Length > 0 && args[0] == "--interactive")
                 interactive = true;
 
