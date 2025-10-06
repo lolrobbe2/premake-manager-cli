@@ -60,6 +60,8 @@ namespace src
 
                     branch.AddCommand<VersionSetCommand>("set")
                         .WithDescription("set the premake version");
+                    branch.AddCommand<VersionGetCurrent>("get")
+                        .WithDescription("get the current set premake version");
                 });
                 config.AddBranch("workspace",branch =>
                 {

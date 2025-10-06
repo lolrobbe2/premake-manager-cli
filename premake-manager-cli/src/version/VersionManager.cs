@@ -193,7 +193,25 @@ namespace src.version
                 AnsiConsole.MarkupLine($"[red]Unexpected error:[/] {ex.Message}");
             }
         }
-        public string? GetCurrentWindowsPath()
+
+        public static string? GetCurrentVersionPath()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return GetCurrentWindowsPath();
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return GetCurrentUnixPath();
+            else
+                AnsiConsole.MarkupLine("[red]Unsupported OS for PATH retrieval.[/]");
+
+            return null;//platform is not supported
+        }
+
+        // ------------------- Windows --------------------
+        /// <summary>
+        /// This returns the install path of the current premake version
+        /// </summary>
+        /// <returns></returns>
+        public static string? GetCurrentWindowsPath()
         {
             string currentPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
             string[] parts = currentPath.Split(';');
@@ -208,8 +226,55 @@ namespace src.version
 
             return filtered.First();
         }
+
+        // ------------------- Linux/macOS --------------------
+
+        /// <summary>
+        /// This function returns the install dir on unix platform
+        /// </summary>
+        /// <returns></returns>
+        private static string? GetCurrentUnixPath()
+        {
+            string symlinkPath = "/usr/local/bin/premake5";
+
+            try
+            {
+                if (!File.Exists(symlinkPath))
+                {
+                    AnsiConsole.MarkupLine($"[yellow]Symlink not found: {symlinkPath}[/]");
+                    return null;
+                }
+
+                // Get the target path of the symlink
+                string? targetPath = File.ResolveLinkTarget(symlinkPath, false)?.FullName;
+
+                if (string.IsNullOrEmpty(targetPath))
+                {
+                    AnsiConsole.MarkupLine($"[red]Failed to resolve symlink target for:[/] {symlinkPath}");
+                    return null;
+                }
+
+                AnsiConsole.MarkupLine($"[green]Symlink target:[/] {targetPath}");
+                return targetPath;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                AnsiConsole.MarkupLine($"[red]Permission denied while reading symlink.[/]");
+            }
+            catch (PlatformNotSupportedException)
+            {
+                AnsiConsole.MarkupLine($"[red]Symlinks are not supported on this platform or .NET version.[/]");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Unexpected error:[/] {ex.Message}");
+            }
+
+            return null;
+        }
+
         #endregion
     }
 
-   
+
 } 

@@ -152,4 +152,19 @@ namespace src.version
         }
 
     }
+    internal class VersionGetCurrent : AsyncCommand
+    {
+        public override async Task<int> ExecuteAsync(CommandContext context)
+        {
+            string? path = VersionManager.GetCurrentVersionPath();
+            if (path is not null)
+            {
+                string[] splitPath = path.Split("/");
+                AnsiConsole.MarkupLine($"current version: [green]{splitPath[splitPath.Length - 2]}[/]");
+            } else {
+                AnsiConsole.MarkupLine("[red] no version is currently set");
+            }
+                return 0;
+        }
+    }
 }
