@@ -50,10 +50,12 @@ namespace src.utils
         public static void ClearDirectory(string path)
         {
             foreach (string dir in Directory.EnumerateDirectories(path))
-                Directory.Delete(dir, recursive: true);
+                if(Directory.Exists(dir))
+                    Directory.Delete(dir, recursive: true);
 
             foreach (string file in Directory.EnumerateFiles(path))
-                File.Delete(file);
+                if (File.Exists(file))
+                    File.Delete(file);
         }
     }
 }
