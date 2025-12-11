@@ -26,7 +26,9 @@ architecture "x64"
       vsprops {
          PublishSingleFile = "true",
          SelfContained = "true",
-         IncludeNativeLibrariesForSelfExtract = "true"
+         IncludeNativeLibrariesForSelfExtract = "true",
+         PublishTrimmed =  "true",
+         Nullable = "enable"
       }
       filter "configurations:Debug"
          defines { "DEBUG" }
@@ -36,3 +38,4 @@ architecture "x64"
          symbols "Off"
          defines { "NDEBUG" }
          optimize "On"
+         
