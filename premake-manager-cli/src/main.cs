@@ -42,7 +42,8 @@ namespace src
                 config.SetApplicationName("premake manager");
                 config.AddCommand<Info>("info");
                 config.AddCommand<ConfigCommand>("configure");
-                config.AddBranch("config", branch => {
+                config.AddBranch("config", branch =>
+                {
                     branch.SetDescription("manage premakeConfig");
                     branch.AddCommand<ConfigSetVersionCommand>("version");
                     branch.AddCommand<ConfigViewCommand>("view");
@@ -61,7 +62,7 @@ namespace src
                     branch.AddCommand<VersionSetCommand>("set")
                         .WithDescription("set the premake version");
                 });
-                config.AddBranch("workspace",branch =>
+                config.AddBranch("workspace", branch =>
                 {
                     branch.SetDescription("Manage premake workspaces");
                     branch.AddCommand<workspace.WorkspaceCreateCommand>("new")
@@ -81,6 +82,15 @@ namespace src
                           .WithDescription("add a module to the confiuration");
 
                     branch.AddCommand<modules.ModuleRemoveCommand>("remove");
+                });
+
+                config.AddBranch("test", branch =>
+                {
+                    branch.SetDescription("The Premake Manager selftest commands");
+                    branch.AddCommand<selfTest.SelfTestCommand>("all")
+                        .WithDescription("run all the registered self tests");
+
+                    branch.AddCommand<selfTest.SelfTestGroupCommand>("group").WithDescription("run all the test in a certain group");
                 });
             });
 

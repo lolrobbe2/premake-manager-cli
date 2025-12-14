@@ -1,12 +1,13 @@
-﻿using System;
+﻿using src.modules;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
-using System.IO;
-using src.modules;
+using YamlDotNet.Serialization.NamingConventions;
+using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace src.config
 {
@@ -24,8 +25,9 @@ namespace src.config
             writer.modules = reader.modules;
             return writer;
         }
-        ConfigWriter()
+        public ConfigWriter()
         {
+            this.modules = new Dictionary<string, PremakeModule>();
         }
         /// <summary>
         /// Sets the version of the config

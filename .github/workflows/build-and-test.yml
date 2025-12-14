@@ -1,0 +1,59 @@
+name: Build and Test per Platform
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    env:
+      DOTNET_PUBLISH_COMMON: >
+        -c Release
+        -p:PublishSingleFile=true
+        --self-contained true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:PublishTrimmed=true
+        -p:PublishReadyToRun=false
+        -p:DebugType=None
+        -p:DebugSymbols=false
+        -p:TrimMode=partial
+        -p:InvariantGlobalization=true
+        -p:EnableCompressionInSingleFile=true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Run Tests
+      run: dotnet test --no-build --configuration Release
+
+    - name: Publish
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+            dotnet publish -r win-x64 $DOTNET_PUBLISH_COMMON
+        elif [ "${{ runner.os }}" == "Linux" ]; then
+            dotnet publish -r linux-x64 $DOTNET_PUBLISH_COMMON
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+            dotnet publish -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
+        fi
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: published-${{ runner.os }}
+        path: |
+          bin/Release/net8.0/${{ runner.os }}-*/publish/
