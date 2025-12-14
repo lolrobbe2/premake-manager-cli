@@ -1,8 +1,6 @@
 name: Build and Test per Platform
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
 
 jobs:
