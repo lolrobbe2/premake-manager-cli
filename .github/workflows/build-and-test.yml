@@ -25,35 +25,35 @@ jobs:
         -p:TrimMode=partial
         -p:InvariantGlobalization=true
         -p:EnableCompressionInSingleFile=true
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
+    - uses: actions/checkout@v6
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '9.0.x'
-
-    - name: Restore dependencies
+        cache: true
+    - name: Install dependencies
       run: dotnet restore
+
     - name: Publish
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
-            dotnet publish -r win-x64 $DOTNET_PUBLISH_COMMON
+            dotnet publish  ${{ github.workspace }} -r win-x64 $DOTNET_PUBLISH_COMMON
         elif [ "${{ runner.os }}" == "Linux" ]; then
-            dotnet publish -r linux-x64 $DOTNET_PUBLISH_COMMON
+            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON
         elif [ "${{ runner.os }}" == "macOS" ]; then
-            dotnet publish -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
+            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
         fi
     - name: Run Self-Tests
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
-            ./bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe test all
+            ${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe test all
         elif [ "${{ runner.os }}" == "Linux" ]; then
-            ./bin/Release/net9.0/linux-x64/publish/premake-manager-cli test all
+            ${{ github.workspace }}/bin/Release/net9.0/linux-x64/publish/premake-manager-cli test all
         elif [ "${{ runner.os }}" == "macOS" ]; then
-            ./bin/Release/net9.0/osx-arm64/publish/premake-manager-cli test all
+            ${{ github.workspace }}/bin/Release/net9.0/osx-arm64/publish/premake-manager-cli test all
         fi
 
 
