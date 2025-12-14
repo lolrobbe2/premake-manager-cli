@@ -32,20 +32,35 @@ namespace src.selfTest
 
         public async override Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            if (string.IsNullOrWhiteSpace(settings.GroupName))
-            {
-                AnsiConsole.MarkupLine("[red]Please provide a group name using -g or --group[/]");
-                return 1;
-            }
-
             var runner = new TestRunner();
 
             // Register all test classes
             runner.AddTestClass<DependencyGraphTests>();
             runner.AddTestClass<ConfigWriterTests>();
 
-            await runner.RunGroupAsync(settings.GroupName);
+            // Determine which group to run
+            string groupToRun = settings.GroupName;
+
+            if (string.IsNullOrWhiteSpace(groupToRun))
+            {
+                var allGroups = runner.GetAllGroupNames();
+                if (allGroups.Length == 0)
+                {
+                    AnsiConsole.MarkupLine("[red]No test groups available to run.[/]");
+                    return 1;
+                }
+
+                groupToRun = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("Select a test group to run:")
+                        .PageSize(10)
+                        .AddChoices(allGroups)
+                );
+            }
+
+            await runner.RunGroupAsync(groupToRun);
             return 0;
         }
     }
+
 }

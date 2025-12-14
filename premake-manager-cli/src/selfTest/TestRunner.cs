@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace src.selfTest
@@ -101,7 +102,7 @@ namespace src.selfTest
                 {
                     var progressTask = ctx.AddTask("[green]Executing tests...[/]", maxValue: totalTests);
 
-                    foreach (var group in _groups)
+                    foreach (var group in groupsToRun)
                     {
                         string groupName = group.Key;
 
@@ -150,6 +151,11 @@ namespace src.selfTest
                 if (content != expectedContent)
                     throw new Exception($"File content does not match expected text.\nExpected:\n{expectedContent}\nActual:\n{content}");
             }
+        }
+
+        internal string[] GetAllGroupNames()
+        {
+            return _groups.Keys.ToArray();
         }
     }
 }
