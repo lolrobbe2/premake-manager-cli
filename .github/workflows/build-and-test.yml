@@ -51,9 +51,4 @@ jobs:
             dotnet publish -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
         fi
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: published-${{ runner.os }}
-        path: |
-          bin/Release/net8.0/${{ runner.os }}-*/publish/
+
