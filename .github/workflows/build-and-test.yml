@@ -40,7 +40,7 @@ jobs:
     - name: run premake5
       run: premake5 vs2022
     - name: Install dependencies
-      run: dotnet restore ..${{ github.workspace }}
+      run: dotnet restore ${{ github.workspace }}
 
     - name: Publish
       run: |
