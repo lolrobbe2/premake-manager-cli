@@ -34,6 +34,7 @@ jobs:
       with:
         dotnet-version: '9.0.x'
         cache: true
+        cache-dependency-path: ${{ github.workspace }}/premake-manager-cli
     - name: Install dependencies
       run: dotnet restore
 
