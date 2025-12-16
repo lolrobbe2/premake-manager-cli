@@ -123,8 +123,8 @@ namespace src.selfTest
                             {
                                 ctx.Refresh();
                                 AnsiConsole.MarkupLine($"[blue]Running test:[/] {testName}");
-                                await action();
-                                AnsiConsole.MarkupLine($"[green]✔ Test passed:[/] {groupName} / {testName}");
+                                await RunSilently(action);
+                                 AnsiConsole.MarkupLine($"[green]✔ Test passed:[/] {groupName} / {testName}");
                             }
                             catch (Exception ex)
                             {
@@ -156,6 +156,26 @@ namespace src.selfTest
         internal string[] GetAllGroupNames()
         {
             return _groups.Keys.ToArray();
+        }
+
+        internal static async Task RunSilently(Func<Task> action)
+        {
+            var originalOut = Console.Out;
+            var originalErr = Console.Error;
+
+            try
+            {
+                using var writer = new StringWriter(); // discard output
+                Console.SetOut(writer);
+                Console.SetError(writer);
+
+                await action(); // run your function silently
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+                Console.SetError(originalErr);
+            }
         }
     }
 }

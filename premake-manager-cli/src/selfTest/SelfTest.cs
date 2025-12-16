@@ -2,6 +2,7 @@
 using Spectre.Console.Cli;
 using src.selfTest;
 using src.selfTest.config;
+using src.selfTest.version;
 using System.ComponentModel;
 using System.Threading.Tasks;
 namespace src.selfTest
@@ -15,6 +16,7 @@ namespace src.selfTest
             // Register all test classes
             runner.AddTestClass<DependencyGraphTests>();
             runner.AddTestClass<ConfigWriterTests>();
+            runner.AddTestClass<VersionManagerTests>();
 
             await runner.RunAllAsync();
             return 0;
@@ -37,6 +39,7 @@ namespace src.selfTest
             // Register all test classes
             runner.AddTestClass<DependencyGraphTests>();
             runner.AddTestClass<ConfigWriterTests>();
+            runner.AddTestClass<VersionManagerTests>();
 
             // Determine which group to run
             string groupToRun = settings.GroupName;
