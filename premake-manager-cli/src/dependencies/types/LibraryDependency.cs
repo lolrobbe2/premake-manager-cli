@@ -16,6 +16,7 @@ namespace src.dependencies.types
 
         public bool IsValid() => LibraryDependencyValidator.ValidateLibrary(name, version);
 
+        [YamlIgnore]
         public VersionRange VersionRange => new VersionRange(version);
     }
 

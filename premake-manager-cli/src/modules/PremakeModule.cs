@@ -26,6 +26,8 @@ namespace src.modules
 
         public string version { get; set; } = "*";
 
+        public string entryPoint { get; set; }
+
         [YamlIgnore]
         public string? module { get; set; } = "";
         public PremakeModule()

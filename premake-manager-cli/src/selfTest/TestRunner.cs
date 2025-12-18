@@ -88,55 +88,41 @@ namespace src.selfTest
             foreach (var g in groupsToRun.Values)
                 totalTests += g.Count;
 
-            await AnsiConsole.Progress()
-                .AutoClear(false)
-                .HideCompleted(false)
-                .Columns(new ProgressColumn[]
-                {
-                    new TaskDescriptionColumn(),
-                    new ProgressBarColumn { CompletedStyle = new Style(foreground: Color.Green) },
-                    new PercentageColumn(),
-                    new SpinnerColumn()
-                })
-                .StartAsync(async ctx =>
-                {
-                    var progressTask = ctx.AddTask("[green]Executing tests...[/]", maxValue: totalTests);
 
-                    foreach (var group in groupsToRun)
+
+
+            foreach (var group in groupsToRun)
+            {
+                string groupName = group.Key;
+
+                // Create a panel for the group
+                var panel = new Panel(new Align(new Markup($"[bold blue]{groupName} ({group.Value.Count})[/]"), HorizontalAlignment.Center))
+                {
+                    Border = BoxBorder.Rounded,
+                    Padding = new Padding(1, 1),
+                    Header = new PanelHeader("Test Group", Justify.Center),
+                    Expand = true
+                };
+
+                AnsiConsole.Write(panel);
+
+                foreach (var (testName, action) in group.Value)
+                {
+                    try
                     {
-                        string groupName = group.Key;
-
-                        // Create a panel for the group
-                        var panel = new Panel(new Align(new Markup($"[bold blue]{groupName} ({group.Value.Count})[/]"), HorizontalAlignment.Center))
-                        {
-                            Border = BoxBorder.Rounded,
-                            Padding = new Padding(1, 1),
-                            Header = new PanelHeader("Test Group", Justify.Center),
-                            Expand = true
-                        };
-
-                        AnsiConsole.Write(panel);
-
-                        foreach (var (testName, action) in group.Value)
-                        {
-                            try
-                            {
-                                ctx.Refresh();
-                                AnsiConsole.MarkupLine($"[blue]Running test:[/] {testName}");
-                                await RunSilently(action);
-                                 AnsiConsole.MarkupLine($"[green]✔ Test passed:[/] {groupName} / {testName}");
-                            }
-                            catch (Exception ex)
-                            {
-                                AnsiConsole.MarkupLine($"[red]✖ Test failed:[/] {groupName} / {testName} - {ex.Message}");
-                            }
-
-                            progressTask.Increment(1);
-                        }
+                        AnsiConsole.MarkupLine($"[blue]Running test:[/] {testName}");
+                        await RunSilently(action);
+                        AnsiConsole.MarkupLine($"[green]✔ Test passed:[/] {groupName} / {testName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]✖ Test failed:[/] {groupName} / {testName} - {ex.Message}");
                     }
 
-                });
 
+                }
+            }
+              
             AnsiConsole.MarkupLine("[bold green]Selected tests completed.[/]");
         }
 

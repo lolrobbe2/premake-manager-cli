@@ -1,4 +1,5 @@
-﻿using src.modules;
+﻿using src.libraries;
+using src.modules;
 using System.Collections.Generic;
 using System.IO;
 using YamlDotNet.Serialization;
@@ -10,8 +11,14 @@ namespace src.config
     {
         [YamlMember(Alias = "version")]
         public string version { get; set; } = string.Empty;
+        [YamlMember(Alias = "modulesPath")]
+        public string modulesPath { get; set; } = string.Empty;
+        [YamlMember(Alias = "librariesPath")]
+        public string librariesPath { get; set; } = string.Empty;
         [YamlMember(Alias = "modules")]
         public IDictionary<string, PremakeModule> modules { get; set; } = new Dictionary<string, PremakeModule>();
+        [YamlMember(Alias = "libraries")]
+        public IDictionary<string, PremakeLibrary> libraries { get; set; } = new Dictionary<string, PremakeLibrary>();
         public ConfigReader(string path = "")
         {
             string configPath;
@@ -36,10 +43,17 @@ namespace src.config
                 {
                     //extract version
                     version = tempInstance["version"] ?? string.Empty;
-                    if (tempInstance["modules"] == null)
-                        return;
-                    foreach (var module in tempInstance["modules"])
-                        modules.Add(module.Key, new PremakeModule(module.Value["version"],module.Key));     
+                    if (tempInstance["modules"] != null)
+                    {
+                        foreach (var module in tempInstance["modules"])
+                            modules.Add(module.Key, new PremakeModule(module.Value["version"], module.Key));
+                    }
+
+                    if (tempInstance["libraries"] != null)
+                    {
+                        foreach (var library in tempInstance["libraries"])
+                            libraries.Add(library.Key, new PremakeLibrary(library.Value["version"], library.Key));
+                    }
                 }
             }
         }
