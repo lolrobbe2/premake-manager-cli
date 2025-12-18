@@ -41,6 +41,7 @@ jobs:
       run: dotnet restore ${{ github.workspace }}
 
     - name: Publish
+      shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
             dotnet publish  ${{ github.workspace }} -r win-x64 $DOTNET_PUBLISH_COMMON
@@ -50,6 +51,7 @@ jobs:
             dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
         fi
     - name: Run Self-Tests
+      shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
             ${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe test all
