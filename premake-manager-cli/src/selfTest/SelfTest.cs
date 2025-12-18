@@ -1,6 +1,7 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
 using src.selfTest;
+using src.selfTest.common_index;
 using src.selfTest.config;
 using src.selfTest.version;
 using System.ComponentModel;
@@ -17,7 +18,7 @@ namespace src.selfTest
             runner.AddTestClass<DependencyGraphTests>();
             runner.AddTestClass<ConfigWriterTests>();
             runner.AddTestClass<VersionManagerTests>();
-
+            runner.AddTestClass<CommonIndexTests>();
             await runner.RunAllAsync();
             return 0;
         }
@@ -40,6 +41,7 @@ namespace src.selfTest
             runner.AddTestClass<DependencyGraphTests>();
             runner.AddTestClass<ConfigWriterTests>();
             runner.AddTestClass<VersionManagerTests>();
+            runner.AddTestClass<CommonIndexTests>();
 
             // Determine which group to run
             string groupToRun = settings.GroupName;
