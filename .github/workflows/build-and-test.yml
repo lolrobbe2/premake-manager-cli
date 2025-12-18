@@ -44,7 +44,7 @@ jobs:
       shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
-            dotnet publish  ${{ github.workspace }} -r win-x64 $DOTNET_PUBLISH_COMMON
+            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON
         elif [ "${{ runner.os }}" == "Linux" ]; then
             dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON
         elif [ "${{ runner.os }}" == "macOS" ]; then
