@@ -54,7 +54,7 @@ jobs:
       shell: bash
       run: |
         if [ "${{ runner.os }}" == "Windows" ]; then
-            ${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe test all
+            "${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe" test all
         elif [ "${{ runner.os }}" == "Linux" ]; then
             ${{ github.workspace }}/bin/Release/net9.0/linux-x64/publish/premake-manager-cli test all
         elif [ "${{ runner.os }}" == "macOS" ]; then
