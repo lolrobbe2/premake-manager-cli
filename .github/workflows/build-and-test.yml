@@ -1,0 +1,64 @@
+name: Build and Test per Platform
+
+on:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    env:
+      DOTNET_PUBLISH_COMMON: >
+        -c Release
+        -p:PublishSingleFile=true
+        --self-contained true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:PublishTrimmed=true
+        -p:PublishReadyToRun=false
+        -p:DebugType=None
+        -p:DebugSymbols=false
+        -p:TrimMode=partial
+        -p:InvariantGlobalization=true
+        -p:EnableCompressionInSingleFile=true
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x'
+        cache: true
+        cache-dependency-path: ${{ github.workspace }}/premake-manager-cli
+    - name: Installing premake5
+      uses: Jarod42/install-premake5@v6
+    - name: run premake5
+      run: premake5 vs2022
+    - name: Install dependencies
+      run: dotnet restore ${{ github.workspace }}
+
+    - name: Publish
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON
+        elif [ "${{ runner.os }}" == "Linux" ]; then
+            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
+        fi
+    - name: Run Self-Tests
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" == "Windows" ]; then
+            "${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe" test all
+        elif [ "${{ runner.os }}" == "Linux" ]; then
+            ${{ github.workspace }}/bin/Release/net9.0/linux-x64/publish/premake-manager-cli test all
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+            ${{ github.workspace }}/bin/Release/net9.0/osx-arm64/publish/premake-manager-cli test all
+        fi
+
+

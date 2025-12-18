@@ -1,12 +1,14 @@
-﻿using System;
+﻿using src.libraries;
+using src.modules;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
-using System.IO;
-using src.modules;
+using YamlDotNet.Serialization.NamingConventions;
+using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace src.config
 {
@@ -16,7 +18,10 @@ namespace src.config
     internal class ConfigWriter
     {
         public string version {  get; set; }
+
         public IDictionary<string,PremakeModule> modules { get; set; }
+        public IDictionary<string, PremakeLibrary> libraries { get; set; }
+
         public static ConfigWriter FromReader(ConfigReader reader)
         {
             ConfigWriter writer = new();
@@ -24,8 +29,9 @@ namespace src.config
             writer.modules = reader.modules;
             return writer;
         }
-        ConfigWriter()
+        public ConfigWriter()
         {
+            this.modules = new Dictionary<string, PremakeModule>();
         }
         /// <summary>
         /// Sets the version of the config
@@ -69,6 +75,40 @@ namespace src.config
             }).Value;
             if(foundModule != null)
                 modules.Remove(moduleName);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a module to the Configuration
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
+        public ConfigWriter AddLibrary(PremakeLibrary library)
+        {
+            if (string.IsNullOrEmpty(library.version))
+                library.version = "*";
+            libraries.Add(library.library, library);
+            return this;
+        }
+
+        /// <summary>
+        /// Removes a Library from the configuration
+        /// </summary>
+        /// <param name="libraryName"></param>
+        /// <returns></returns>
+        public ConfigWriter RemoveLibrary(string libraryName)
+        {
+            PremakeLibrary foundLibrary = libraries.First(library =>
+            {
+                if (library.Key.Equals(libraryName, StringComparison.OrdinalIgnoreCase))
+                {
+                    libraryName = library.Key;
+                    return true;
+                }
+                return false;
+            }).Value;
+            if (foundLibrary != null)
+                libraries.Remove(libraryName);
             return this;
         }
 

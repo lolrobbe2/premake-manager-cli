@@ -20,7 +20,18 @@ namespace src
         // Static constructor to initialize the instance
         static Github()
         {
-            _instance = new GitHubClient(new ProductHeaderValue("MyApp"));
+            GitHubClient client = new GitHubClient(
+                new ProductHeaderValue("premake-manager-cli")
+            );
+
+            string? githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+
+            if (!string.IsNullOrWhiteSpace(githubToken))
+            {
+                client.Credentials = new Credentials(githubToken);
+            }
+
+            _instance = client;
         }
 
         // Public static property to access the instance
@@ -35,6 +46,11 @@ namespace src
         public static string FormatZipballUrl(GithubRepo repo, string refName)
         {
             return $"https://github.com/{repo.owner}/{repo.name}/zipball/{refName}";
+        }
+
+        internal static string GetDescription(GithubRepo repo)
+        {
+            throw new NotImplementedException();
         }
     }
 }

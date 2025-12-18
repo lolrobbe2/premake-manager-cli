@@ -49,13 +49,22 @@ namespace src.utils
         }
         public static void ClearDirectory(string path)
         {
-            foreach (string dir in Directory.EnumerateDirectories(path))
-                if(Directory.Exists(dir))
-                    Directory.Delete(dir, recursive: true);
+            try
+            {
+                foreach (string dir in Directory.EnumerateDirectories(path))
+                    if (Directory.Exists(dir))
+                        Directory.Delete(dir, recursive: true);
+            }
+            catch (Exception) { /*ignore*/ }
 
-            foreach (string file in Directory.EnumerateFiles(path))
-                if (File.Exists(file))
-                    File.Delete(file);
+            try
+            {
+                foreach (string file in Directory.EnumerateFiles(path))
+                    if (File.Exists(file))
+                        File.Delete(file);
+            }
+            catch (Exception) { /*ignore*/ }
+
         }
     }
 }
