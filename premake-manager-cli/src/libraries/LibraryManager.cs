@@ -80,7 +80,8 @@ namespace src.libraries
         [RequiresUnreferencedCode("Calls src.config.ConfigReader.ConfigReader(String)")]
         public static async Task InstallLibraryCtx(ProgressContext ctx, string githubLink, string version = "*")
         {
-            ConfigReader reader = new ConfigReader("");
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
             if (!githubLink.StartsWith("https://github.com/"))
             {
                 string[] repoInfo = githubLink.Split('/');
@@ -90,14 +91,15 @@ namespace src.libraries
 
             if (string.IsNullOrEmpty(version))
                 version = "*";
-            LibraryConfig config = await GetLibraryConfig(githubLink);
+            LibraryConfig libconfig = await GetLibraryConfig(githubLink);
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);
-            await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {config.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
-            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"{reader.librariesPath}/{repo.name}", $"extracting {config.name}");
+            await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {libconfig.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"{config.LibrariesPath}/{repo.name}", $"extracting {libconfig.name}");
         }
 
+        [RequiresUnreferencedCode("Calls src.libraries.LibraryManager.InstallLibraryCtx(ProgressContext, String, String)")]
         public static async Task InstallLibrariesCtx(ProgressContext ctx, List<(string githubLink, string version)> modules)
         {
             foreach (var (githubLink, version) in modules)

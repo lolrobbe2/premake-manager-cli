@@ -18,10 +18,12 @@ namespace src.config
     {
         public async override Task<int> ExecuteAsync(CommandContext context)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
             //TODO should we auto install the correct version of premake?
-            await VersionManager.SetVersion(config.version);
-            await ModuleManager.InstallModules(config.modules.Values.ToList());
+            await VersionManager.SetVersion(config.Version);
+            if(config.Modules != null)
+                await ModuleManager.InstallModules(config.Modules.Values.ToList());
             return 0;
         }
     }
@@ -32,15 +34,15 @@ namespace src.config
         {
             [CommandArgument(0, "[VERSION]")]
             [Description("version to install")]
-            public required string name { get; set; }
+            public required string version { get; set; }
         }
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            await VersionManager.SetVersion(settings.name);
-            ConfigReader reader = new ConfigReader();
-            ConfigWriter writer = ConfigWriter.FromReader(reader);
-            writer.SetVersion(settings.name);
-            await writer.Write();
+            await VersionManager.SetVersion(settings.version);
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
+            config.Version = settings.version;
+            ConfigManager.WriteConfig(config,null);
             return 0;
         }
 
@@ -48,7 +50,7 @@ namespace src.config
         {
             IReadOnlyList<Release> releases = VersionManager.GetVersions().ConfigureAwait(true).GetAwaiter().GetResult();
             Release? release = null;
-            if (settings.name == null)
+            if (settings.version == null)
             {
 
                 string selectedTag = AnsiConsole.Prompt(
@@ -58,11 +60,11 @@ namespace src.config
                        .AddChoices(releases.Select(r => r.TagName))
                 );
 
-                settings.name = selectedTag;
+                settings.version = selectedTag;
             }
-            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.name));
+            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.version));
             if (release == null)
-                return ValidationResult.Error($"Release with tag '{settings.name}' was not found. Please provide a valid release tag.");
+                return ValidationResult.Error($"Release with tag '{settings.version}' was not found. Please provide a valid release tag.");
             return ValidationResult.Success();
         }
     }
@@ -71,7 +73,7 @@ namespace src.config
     {
         public async override Task<int> ExecuteAsync(CommandContext context)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
 
             var mainTable = new Table()
              .AddColumn("Owner")
@@ -79,32 +81,36 @@ namespace src.config
             mainTable.Border = TableBorder.Rounded;
             mainTable.ShowRowSeparators = true;
 
-            var groupedModules = config.modules
-                .GroupBy(m => m.Value.owner)
-                .OrderBy(g => g.Key);
-
-            foreach (var group in groupedModules)
+            if (config.Modules != null)
             {
+                var groupedModules = config.Modules
+                    .GroupBy(m => m.Value.owner)
+                    .OrderBy(g => g.Key);
 
-                // Create the subtable for the current owner
-                var subTable = new Table()
-                    .AddColumn("Repo")
-                    .AddColumn("Version");
-                subTable.Border = TableBorder.Rounded;
-                subTable.ShowRowSeparators = true;
-                // Add rows to the subtable for each module of the owner$
-
-
-                foreach (var module in group)
+                foreach (var group in groupedModules)
                 {
-                    subTable.AddRow($"[link=https://github.com/{group.Key}/{module.Value.repo}] {module.Value.repo}[/]", module.Value.version);
-                }
-                                    
 
-                // Add a row in the main table for the owner, with the subtable as its content
-                mainTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"),subTable);
+                    // Create the subtable for the current owner
+                    var subTable = new Table()
+                        .AddColumn("Repo")
+                        .AddColumn("Version");
+                    subTable.Border = TableBorder.Rounded;
+                    subTable.ShowRowSeparators = true;
+                    // Add rows to the subtable for each module of the owner$
+
+
+                    foreach (var module in group)
+                    {
+                        subTable.AddRow($"[link=https://github.com/{group.Key}/{module.Value.repo}] {module.Value.repo}[/]", module.Value.version);
+                    }
+
+
+                    // Add a row in the main table for the owner, with the subtable as its content
+                    mainTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
+                }
+                AnsiConsole.Write(mainTable);  // Render the main table with the owner row
+               
             }
-            AnsiConsole.Write(mainTable);  // Render the main table with the owner row
             return 0;
         }
     }

@@ -2,7 +2,6 @@
 using Spectre.Console.Cli;
 using src.selfTest;
 using src.selfTest.common_index;
-using src.selfTest.config;
 using src.selfTest.version;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ namespace src.selfTest
 
             // Register all test classes
             runner.AddTestClass<DependencyGraphTests>();
-            runner.AddTestClass<ConfigWriterTests>();
             runner.AddTestClass<VersionManagerTests>();
             runner.AddTestClass<CommonIndexTests>();
             await runner.RunAllAsync();
@@ -39,7 +37,6 @@ namespace src.selfTest
 
             // Register all test classes
             runner.AddTestClass<DependencyGraphTests>();
-            runner.AddTestClass<ConfigWriterTests>();
             runner.AddTestClass<VersionManagerTests>();
             runner.AddTestClass<CommonIndexTests>();
 

@@ -18,9 +18,9 @@ namespace src.common_index
     [YamlSerializable]
     internal class IndexView
     {
-        [YamlMember]
+        [YamlMember(Order = 0)]
         public required string remote {  get; set; }
-        [YamlMember]
+        [YamlMember(Order = 1)]
         public required IDictionary<string, IList<IndexLibrary>> libraries;
     }
 }
