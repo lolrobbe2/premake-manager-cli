@@ -95,6 +95,10 @@ namespace src
                 config.AddBranch("index", branch => {
                     branch.SetDescription("All commands for managing the common index");
                     branch.AddCommand<common_index.CommonIndexCommand>("new");
+
+                    branch.AddBranch("add", branch => {
+                        branch.AddCommand<common_index.CommonAddLibCommand>("library");
+                    });
                 });
             });
 

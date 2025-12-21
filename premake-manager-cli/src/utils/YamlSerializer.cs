@@ -73,7 +73,8 @@ namespace src.utils
 
         public static void Serialize<T>(T value, string filePath)
         {
-            
+            filePath =  Path.ChangeExtension(filePath, ".yml");
+            PathUtils.EnsureExists(filePath);
             using FileStream fileStream = new FileStream(filePath, System.IO.FileMode.Create, FileAccess.Write, FileShare.None);
             Serialize(value).CopyTo(fileStream);
         }

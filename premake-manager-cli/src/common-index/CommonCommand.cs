@@ -3,6 +3,8 @@ using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -52,6 +54,52 @@ namespace src.common_index
             CommonIndex.WriteFileIndex(index, "premakeIndex.yml");
             AnsiConsole.MarkupLine("[green]✔ Index file created successfully[/]");
             return Task.FromResult(1);
+        }
+    }
+
+    internal class CommonAddLibCommand : AsyncCommand<CommonAddLibCommand.Settings>
+    {
+        public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            IndexView index = CommonIndex.ReadFileIndex();
+            IndexLibrary library = new IndexLibrary() { name = settings.repo ?? string.Empty, description = settings.description ?? string.Empty };
+            if (string.IsNullOrEmpty(settings.owner))
+            {
+                settings.owner = AnsiConsole.Prompt(new TextPrompt<string>("[green]owner: [/]"));
+            }
+
+            if (string.IsNullOrEmpty(settings.repo))
+            {
+                library.name = AnsiConsole.Prompt(new TextPrompt<string>("[green]repo: [/]"));
+            }
+
+            if (string.IsNullOrEmpty(settings.description))
+            {
+                library.description = AnsiConsole.Prompt(new TextPrompt<string>("[green]description: [/]"));
+            }
+            CommonIndex.CreateNewLibrary(ref index, library, settings.owner!);
+            return Task.FromResult(0);
+        }
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            if (!Path.Exists("premakeIndex.yml"))
+            {
+                return ValidationResult.Error("no existing index found!");
+            }
+            return ValidationResult.Success();
+        }
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "[OWNER]")]
+            [Description("the owner of the library (github name)")]
+            public string? owner { get; set; }
+            [CommandArgument(0, "[REPO]")]
+            [Description("the name of the repo")]
+            public string? repo { get; set; }
+
+            [CommandArgument(0, "[DESRIPTION]")]
+            [Description("the library desciption")]
+            public string? description { get; set; }
         }
     }
 }

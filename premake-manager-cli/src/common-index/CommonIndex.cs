@@ -1,4 +1,6 @@
-﻿using src.utils;
+﻿using Spectre.Console;
+using src.libraries;
+using src.utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +28,7 @@ namespace src.common_index
         #endregion
 
         #region FILE
-        public static IndexView ReadFileIndex(string filePath)
+        public static IndexView ReadFileIndex(string filePath = "premakeIndex.yml")
         {
             return YamlSerializer.Deserialize<IndexView>(filePath);
         }
@@ -37,6 +39,7 @@ namespace src.common_index
         }
 
         #endregion
+        
         #region REMOTE
         public static IndexView ReadRemoteIndex(string owner, string repo)
         {
@@ -51,6 +54,29 @@ namespace src.common_index
                 remote = remoteName,
                 libraries = new Dictionary<string, IList<IndexLibrary>>()
             };
+        }
+
+        public static void CreateNewLibrary(ref IndexView index, IndexLibrary library, string owner)
+        {
+          
+            library.description = library.description!.ToLower();
+            library.name = library.name.ToLower();
+            owner = owner.ToLower();
+
+            string LibraryDirectory = Path.Combine([Directory.GetCurrentDirectory(), "libraries", owner, library.name]).ToLower();
+            
+            if (index.libraries.TryGetValue(library.name, out IList<IndexLibrary>? libraries))
+            {
+                libraries.Add(library);
+            }
+            else
+            {
+                libraries = new List<IndexLibrary>();
+                libraries.Add(library);
+                index.libraries.Add(owner,libraries!);
+            }
+            YamlSerializer.Serialize(library, Path.Combine(LibraryDirectory,"premakeLib.yml"));
+            PathUtils.CreateEmpty(Path.Combine(LibraryDirectory, "premake5.lua"));  
         }
     }
 }

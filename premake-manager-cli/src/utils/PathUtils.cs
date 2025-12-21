@@ -66,5 +66,17 @@ namespace src.utils
             catch (Exception) { /*ignore*/ }
 
         }
+
+        public static void EnsureExists(string path)
+        {
+           
+            if(!Directory.Exists(Path.GetDirectoryName(path)) && Path.GetDirectoryName(path) != string.Empty)
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        }
+        public static void CreateEmpty(string path)
+        {
+            EnsureExists(path);
+            File.Create(path);
+        }
     }
 }
