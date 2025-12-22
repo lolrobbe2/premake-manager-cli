@@ -66,6 +66,10 @@ namespace src.utils
             catch (Exception) { /*ignore*/ }
 
         }
+        public string GetRemotesPath()
+        {
+            return Path.Combine(GetRoamingPath(), "remotes");
+        }
 
         public static void EnsureExists(string path)
         {

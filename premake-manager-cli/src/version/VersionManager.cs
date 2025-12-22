@@ -91,6 +91,7 @@ namespace src.version
             return true;
         }
         #endregion
+
         public static async Task<bool> SetVersion(string tagName)
         {
             Release? release = await GetVersion(tagName);
@@ -102,6 +103,7 @@ namespace src.version
             ConfigManager.WriteConfig(config, null);
             return true;
         }
+
         private static string GetPlatformIdentifier()
         {
             // Identify the current platform
@@ -117,6 +119,7 @@ namespace src.version
                     return "unknown";
             }
         }
+
         #region LOCAL_VERSION_PATHS
 
         #endregion
