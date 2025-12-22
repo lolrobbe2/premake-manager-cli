@@ -54,7 +54,7 @@ namespace src.modules
         }
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            await ModuleManager.InstallModule(settings.githublink, settings.version);
+            await ModuleManager.InstallModule(settings.githublink, settings.version!);
             return 0;
         }
 
@@ -89,15 +89,17 @@ namespace src.modules
 
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
             string[] moduleString = settings.githublink.Replace("https://github.com/", "").Split('/');
             await AnsiConsole.Status().StartAsync("Adding module", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
-                await ConfigWriter.FromReader(config).AddModule(new PremakeModule() { owner = moduleString[0], repo = moduleString[1], version = settings.version }).Write();
-
+                config.AddModule(new PremakeModule() { owner = moduleString[0], repo = moduleString[1], version = settings.version! });
             });
+
+            ConfigManager.WriteConfig(config, null);
             return 0;
         }
     }
@@ -114,15 +116,21 @@ namespace src.modules
         public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
         {
             if (string.IsNullOrEmpty(settings.githublink)) {
-                ConfigReader reader = new ConfigReader();
-                IList<PremakeModule> modules = reader.modules.Values.ToList();
-                string selectedLink = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                       .Title("Select a [green]Module to remove[/]:")
-                       .PageSize(10)
-                       .AddChoices(modules.Select(m => m.getLink()))
-                );
-                settings.githublink = selectedLink;
+                Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
+                if (config.Modules != null)
+                {
+                    string selectedLink = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                           .Title("Select a [green]Module to remove[/]:")
+                           .PageSize(10)
+                           .AddChoices(config.Modules.Values.Select(m => m.getLink()))
+                    );
+                    settings.githublink = selectedLink;
+                } else
+                {
+                    AnsiConsole.MarkupLine("[red] No modules to remove [/]");
+                }
             } else {
                 if (!settings.githublink.StartsWith("https://github.com/"))
                     return ValidationResult.Error("the link should start with https://github.com/");
@@ -140,16 +148,18 @@ namespace src.modules
 
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
             string moduleString = settings.githublink!.Replace("https://github.com/", "");
 
             await AnsiConsole.Status().StartAsync("Removing Module", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
-                await ConfigWriter.FromReader(config).RemoveModule(moduleString).Write();
+                config.RemoveModule(moduleString);
             });
 
+            ConfigManager.WriteConfig(config, null);
             return 0;
         }
     }
