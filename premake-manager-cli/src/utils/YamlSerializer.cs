@@ -3,6 +3,7 @@ using src.common_index;
 using System;
 using System.IO;
 using System.Net.Http;
+using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -45,6 +46,15 @@ namespace src.utils
             using Stream stream = response.Content.ReadAsStreamAsync().Result;
             return Deserialize<T>(stream);
         }
+
+        public static T Deserialize<T>(string sourcePath, string filePath)
+        {
+            MemoryStream? compressedStream = ExtractUtils.ReadFile(sourcePath, filePath);
+            if (compressedStream == null)
+                throw new ArgumentNullException(nameof(compressedStream));
+            return Deserialize<T>(compressedStream);
+        }
+
         public static T Deserialize<T>(Stream yamlStream)
         {
             if (yamlStream == null)
