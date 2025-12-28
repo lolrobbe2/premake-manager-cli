@@ -100,6 +100,13 @@ namespace src
                         branch.AddCommand<common_index.CommonAddLibCommand>("library");
                     });
                 });
+                config.AddBranch("remotes", branch => {
+                    branch.SetDescription("All commands for managing the localy used remotes");
+                    branch.AddCommand<common_index.RemotesViewCommand>("view")
+                          .WithDescription("Show all the local remotes");
+                    branch.AddCommand<common_index.RemotesAddCommand>("add")
+                          .WithDescription("Add a new local remote");
+                });
             });
 
             bool running = true;
