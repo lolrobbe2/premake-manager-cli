@@ -92,6 +92,21 @@ namespace src
 
                     branch.AddCommand<selfTest.SelfTestGroupCommand>("group").WithDescription("run all the test in a certain group");
                 });
+                config.AddBranch("index", branch => {
+                    branch.SetDescription("All commands for managing the common index");
+                    branch.AddCommand<common_index.CommonIndexCommand>("new");
+
+                    branch.AddBranch("add", branch => {
+                        branch.AddCommand<common_index.CommonAddLibCommand>("library");
+                    });
+                });
+                config.AddBranch("remotes", branch => {
+                    branch.SetDescription("All commands for managing the localy used remotes");
+                    branch.AddCommand<common_index.RemotesViewCommand>("view")
+                          .WithDescription("Show all the local remotes");
+                    branch.AddCommand<common_index.RemotesAddCommand>("add")
+                          .WithDescription("Add a new local remote");
+                });
             });
 
             bool running = true;

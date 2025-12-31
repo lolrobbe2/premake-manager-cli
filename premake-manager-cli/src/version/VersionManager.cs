@@ -91,16 +91,19 @@ namespace src.version
             return true;
         }
         #endregion
+
         public static async Task<bool> SetVersion(string tagName)
         {
             Release? release = await GetVersion(tagName);
             string path = PathUtils.GetReleasePath(release!);
             AddPremakeToPath(path);
-            ConfigReader reader = new ConfigReader();
-            ConfigWriter configWriter = ConfigWriter.FromReader(reader);
-            configWriter.SetVersion(tagName);
+
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+            config.Version = tagName;
+            ConfigManager.WriteConfig(config, null);
             return true;
         }
+
         private static string GetPlatformIdentifier()
         {
             // Identify the current platform
@@ -116,6 +119,7 @@ namespace src.version
                     return "unknown";
             }
         }
+
         #region LOCAL_VERSION_PATHS
 
         #endregion

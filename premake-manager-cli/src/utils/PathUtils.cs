@@ -47,6 +47,24 @@ namespace src.utils
         {
             return Path.Combine(GetTempPath(), moduleName);
         }
+        public static string GetRemotesPath()
+        {
+            return Path.Combine(GetRoamingPath(), "remotes");
+        }
+        /// <summary>
+        /// returns the Remote path for the given remote (owner,repo) with .zip or tar.gz path
+        /// </summary>
+        /// <param name="owner"></param>
+        /// <param name="repo"></param>
+        /// <returns></returns>
+        public static string GetRemotePath(string owner,string repo)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return Path.Combine(GetRemotesPath(), $"{owner}-{repo}.zip");
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return Path.Combine(GetRemotesPath(), $"{owner}-{repo}.tar.gz");
+            return string.Empty;
+        }
         public static void ClearDirectory(string path)
         {
             try
@@ -65,6 +83,18 @@ namespace src.utils
             }
             catch (Exception) { /*ignore*/ }
 
+        }
+
+        public static void EnsureExists(string path)
+        {
+           
+            if(!Directory.Exists(Path.GetDirectoryName(path)) && Path.GetDirectoryName(path) != string.Empty)
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        }
+        public static void CreateEmpty(string path)
+        {
+            EnsureExists(path);
+            File.Create(path);
         }
     }
 }
