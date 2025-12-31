@@ -47,7 +47,7 @@ namespace src.common_index
         }
         public static IndexView ReadRemoteLocalIndex(string owner, string repo)
         {
-            return YamlSerializer.Deserialize<IndexView>(ExtractUtils.ReadFile(PathUtils.GetRemotePath(owner, repo), "premakeIndex.yml")!);
+            return YamlSerializer.Deserialize<IndexView>(ExtractUtils.ReadFile(PathUtils.GetRemotePath(owner, repo), $"{repo}-main/premakeIndex.yml")!);
         }
         #endregion
         public static IndexView CreateNew(string remoteName)
@@ -71,6 +71,7 @@ namespace src.common_index
             if (index.libraries.TryGetValue(library.name, out IList<IndexLibrary>? libraries))
             {
                 libraries.Add(library);
+                index.libraries[library.name] = libraries;
             }
             else
             {

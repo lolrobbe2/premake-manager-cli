@@ -49,6 +49,7 @@ namespace src.common_index
         private static Remote[] GetRemotes()
         {
             string RemotePaths = Path.Combine(PathUtils.GetRoamingPath(), "premakeRemotes.yml");
+
             if (Path.Exists(RemotePaths))
             {
                 return YamlSerializer.Deserialize<Remotes>(RemotePaths).remotes;

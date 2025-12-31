@@ -53,7 +53,8 @@ namespace src.utils
                 PathUtils.ClearDirectory(destinationDir);
 
             HttpClient httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.ExpectContinue = false;
+            httpClient.DefaultRequestHeaders.ExpectContinue = false;//ensure content length
+
             using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
