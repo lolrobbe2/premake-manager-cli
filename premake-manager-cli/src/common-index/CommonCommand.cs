@@ -1,5 +1,6 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
+using src.config;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -78,6 +79,7 @@ namespace src.common_index
                 library.description = AnsiConsole.Prompt(new TextPrompt<string>("[green]description: [/]"));
             }
             CommonIndex.CreateNewLibrary(ref index, library, settings.owner!);
+            CommonIndex.WriteFileIndex(index);
             return Task.FromResult(0);
         }
         public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
@@ -100,6 +102,45 @@ namespace src.common_index
             [CommandArgument(0, "[DESRIPTION]")]
             [Description("the library desciption")]
             public string? description { get; set; }
+        }
+
+    }
+    internal class CommonAddUriLibCommand : AsyncCommand<CommonAddUriLibCommand.Settings>
+    {
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "<githublink>")]
+            [Description("The GitHub link of the library or the owner/repo.")]
+            public string githublink { get; set; } = "";
+        }
+
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+
+            if (!settings.githublink.StartsWith("https://github.com/"))
+                return ValidationResult.Error("the link should start with https://github.com/");
+            GithubRepo repo = Github.GetRepoFromLink(settings.githublink);
+            if (string.IsNullOrEmpty(repo.owner))
+                return ValidationResult.Error("the repo owner name should be valid");
+
+            if (string.IsNullOrEmpty(repo.name))
+                return ValidationResult.Error("the repo name name should be valid");
+
+        
+            return ValidationResult.Success();
+
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            IndexView index = CommonIndex.ReadFileIndex();
+            GithubRepo libRepo = Github.GetRepoFromLink(settings.githublink);
+            string description = await Github.GetDescription(libRepo);
+            IndexLibrary library = new IndexLibrary() { name = libRepo.name, description = description };
+
+            CommonIndex.CreateNewLibrary(ref index, library, libRepo.owner);
+            CommonIndex.WriteFileIndex(index);
+            return 0;
         }
     }
 }

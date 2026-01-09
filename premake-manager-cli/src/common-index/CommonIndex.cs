@@ -33,7 +33,7 @@ namespace src.common_index
             return YamlSerializer.Deserialize<IndexView>(filePath);
         }
 
-        public static void WriteFileIndex(IndexView index, string filePath)
+        public static void WriteFileIndex(IndexView index, string filePath = "premakeIndex.yml")
         {
             YamlSerializer.Serialize(index, filePath);
         }

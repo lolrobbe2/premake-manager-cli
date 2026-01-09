@@ -17,7 +17,7 @@ architecture "x64"
 
    project "premake-manager-cli"
       kind "ConsoleApp" -- CLI application
-      dotnetframework "net9.0" -- Targeting .NET 9.0
+      dotnetframework "net10.0" -- Targeting .NET 9.0
       location "premake-manager-cli"
       language "C#"
       targetdir "bin/%{cfg.buildcfg}"

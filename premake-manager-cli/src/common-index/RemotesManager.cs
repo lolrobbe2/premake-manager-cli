@@ -96,7 +96,7 @@ namespace src.common_index
         /// <summary>
         /// This function checks how old the remotes are and updates them when needed
         /// </summary>
-        private static async Task UpdateRemotes(bool force = false)
+        public static async Task UpdateRemotes(bool force = false)
         {
             if (!force && !RemotesOutdated())
                 return;
@@ -133,7 +133,7 @@ namespace src.common_index
             File.WriteAllText(Path.Combine(PathUtils.GetRemotesPath(), ".timestamp"), timestamp, Encoding.UTF8);
         }
 
-        private static bool RemotesOutdated()
+        public static bool RemotesOutdated()
         {
             string remotesPath = PathUtils.GetRemotesPath();
             string timestampFilePath = Path.Combine(remotesPath, ".timestamp");

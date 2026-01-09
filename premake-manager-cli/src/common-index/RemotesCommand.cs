@@ -117,4 +117,23 @@ namespace src.common_index
             public string? repo { get; set; }
         }
     }
+    internal class RemotesUpdateCommand : AsyncCommand<RemotesUpdateCommand.Settings>
+    {
+        public async override Task<int> ExecuteAsync(CommandContext context, RemotesUpdateCommand.Settings settings)
+        {
+            if(!settings.forceUpdate && !RemotesManager.RemotesOutdated())
+            {
+                AnsiConsole.MarkupLine("[green]remotes are upto date[/]");
+            }
+            await RemotesManager.UpdateRemotes(settings.forceUpdate);
+            return 0;
+        }
+
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "[FORCE]")]
+            [Description("owner of the repo")]
+            public bool forceUpdate { get; set; } = false;
+        }
+    }
 }

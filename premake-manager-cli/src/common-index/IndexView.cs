@@ -25,6 +25,6 @@ namespace src.common_index
         [YamlMember(Order = 0)]
         public required string remote {  get; set; }
         [YamlMember(Order = 1)]
-        public required IDictionary<string, IList<IndexLibrary>> libraries;
+        public required Dictionary<string, IList<IndexLibrary>> libraries;
     }
 }

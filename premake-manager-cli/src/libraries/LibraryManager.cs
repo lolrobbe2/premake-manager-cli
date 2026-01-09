@@ -25,7 +25,7 @@ namespace src.libraries
                 await DownloadUtils.DownloadStatus(config.DownloadUrl, $"Fetching library info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
                 return new LibraryConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
             } catch (Octokit.NotFoundException) {
-                return new LibraryConfig() { name = repo.name, entryPoint = "premake5.lua", description = Github.GetDescription(repo) };
+                return new LibraryConfig() { name = repo.name, entryPoint = "premake5.lua", description = await Github.GetDescription(repo) };
             }
         }
 
