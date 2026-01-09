@@ -92,6 +92,27 @@ namespace src
 
                     branch.AddCommand<selfTest.SelfTestGroupCommand>("group").WithDescription("run all the test in a certain group");
                 });
+                config.AddBranch("index", branch => {
+                    branch.SetDescription("All commands for managing the common index");
+                    branch.AddCommand<common_index.CommonIndexCommand>("new");
+
+                    branch.AddBranch("add", branch => {
+                        branch.AddCommand<common_index.CommonAddLibCommand>("library").WithDescription("Add a library to the local index");
+                        branch.AddBranch("uri", uriBranch =>
+                        {
+                            uriBranch.AddCommand<common_index.CommonAddUriLibCommand>("library").WithDescription("Add a library from a github uri to the local index");
+                        });
+                    });
+                });
+                config.AddBranch("remotes", branch => {
+                    branch.SetDescription("All commands for managing the localy used remotes");
+                    branch.AddCommand<common_index.RemotesViewCommand>("view")
+                          .WithDescription("Show all the local remotes");
+                    branch.AddCommand<common_index.RemotesAddCommand>("add")
+                          .WithDescription("Add a new local remote");
+                    branch.AddCommand<common_index.RemotesUpdateCommand>("update")
+                        .WithDescription("Update outdated remotes");
+                });
             });
 
             bool running = true;

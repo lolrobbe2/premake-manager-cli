@@ -91,14 +91,17 @@ namespace src.libraries
 
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+            
             string[] libraryString = settings.githublink.Replace("https://github.com/", "").Split('/');
             await AnsiConsole.Status().StartAsync("Adding library", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
-                await ConfigWriter.FromReader(config).AddLibrary(new PremakeLibrary() { owner = libraryString[0], repo = libraryString[1], version = settings.version }).Write();
+                
+                config.AddLibrary(new PremakeLibrary() { owner = libraryString[0], repo = libraryString[1], version = settings.version });
             });
+            ConfigManager.WriteConfig(config,null);
             return 0;
         }
     }
@@ -117,15 +120,20 @@ namespace src.libraries
         {
             if (string.IsNullOrEmpty(settings.githublink))
             {
-                ConfigReader reader = new ConfigReader();
-                IList<PremakeLibrary> modules = reader.libraries.Values.ToList();
-                string selectedLink = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                       .Title("Select a [green]Library to remove[/]:")
-                       .PageSize(10)
-                       .AddChoices(modules.Select(m => m.getLink()))
-                );
-                settings.githublink = selectedLink;
+                Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
+                if (config.Libraries != null)
+                {
+                    string selectedLink = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                           .Title("Select a [green]Library to remove[/]:")
+                           .PageSize(10)
+                           .AddChoices(config.Libraries.Values.Select(m => m.getLink()))
+                    );
+                    settings.githublink = selectedLink;
+                } else {
+                    AnsiConsole.MarkupLine("[red] No libraries to remove [/]");
+                }
             }
             else
             {
@@ -145,16 +153,18 @@ namespace src.libraries
 
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
             string libraryString = settings.githublink!.Replace("https://github.com/", "");
 
             await AnsiConsole.Status().StartAsync("Removing Library", async ctx =>
             {
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
-                await ConfigWriter.FromReader(config).RemoveLibrary(libraryString).Write();
+                config.RemoveLibrary(libraryString);
             });
 
+            ConfigManager.WriteConfig(config, null);
             return 0;
         }
     }

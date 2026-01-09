@@ -53,12 +53,13 @@ namespace src.utils
                 PathUtils.ClearDirectory(destinationDir);
 
             HttpClient httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.ExpectContinue = false;//ensure content length
 
             using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
 
-                downloadTask.MaxValue = response.Content.Headers.ContentLength!.Value;
+                downloadTask.MaxValue = (double)(response.Content.Headers.ContentLength ?? -1);
 
                 using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
                               fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -69,6 +70,10 @@ namespace src.utils
 
                     while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
+                        if(downloadTask.MaxValue == -1)
+                        {
+                            downloadTask.MaxValue = (double)(response.Content.Headers.ContentLength ?? -1);
+                        }
                         await fileStream.WriteAsync(buffer, 0, bytesRead);
                         totalBytesRead += bytesRead;
                         downloadTask.Value += bytesRead;

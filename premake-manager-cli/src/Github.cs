@@ -48,9 +48,10 @@ namespace src
             return $"https://github.com/{repo.owner}/{repo.name}/zipball/{refName}";
         }
 
-        internal static string GetDescription(GithubRepo repo)
+        internal static async Task<string> GetDescription(GithubRepo repo)
         {
-            throw new NotImplementedException();
+            Repository repository = await Repositories.Get(repo.owner, repo.name);
+            return repository.Description;
         }
     }
 }
