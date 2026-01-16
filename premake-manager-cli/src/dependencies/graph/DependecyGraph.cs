@@ -110,7 +110,7 @@ namespace src.dependencies.graph
                 resolved.Add(new LibraryDependency
                 {
                     name = group.Key,
-                    version = finalRange.ToString()
+                    version = finalRange!.ToString()
                 });
             }
 

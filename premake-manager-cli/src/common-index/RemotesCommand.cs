@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 
 namespace src.common_index
 {
+    #region REMOTES
+    #region VIEW
     /// <summary>
     /// This command shows all the remotes
     /// </summary>
@@ -51,7 +53,12 @@ namespace src.common_index
             return Task.FromResult(0);
         }
     }
+    #endregion
 
+    #region ADD
+    /// <summary>
+    /// This command allows for adding a remote
+    /// </summary>
     internal class RemotesAddCommand : AsyncCommand<RemotesAddCommand.Settings>
     {
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -84,7 +91,12 @@ namespace src.common_index
             public string? repo { get; set; }
         }
     }
+    #endregion
 
+    #region REMOVE
+    /// <summary>
+    /// This command allows for removing a remote
+    /// </summary>
     internal class RemotesRemoveCommand : AsyncCommand<RemotesRemoveCommand.Settings>
     {
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -117,6 +129,12 @@ namespace src.common_index
             public string? repo { get; set; }
         }
     }
+    #endregion
+
+    #region UPDATE
+    /// <summary>
+    /// This 
+    /// </summary>
     internal class RemotesUpdateCommand : AsyncCommand<RemotesUpdateCommand.Settings>
     {
         public async override Task<int> ExecuteAsync(CommandContext context, RemotesUpdateCommand.Settings settings)
@@ -136,4 +154,6 @@ namespace src.common_index
             public bool forceUpdate { get; set; } = false;
         }
     }
+    #endregion
+    #endregion
 }
