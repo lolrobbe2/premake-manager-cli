@@ -1,5 +1,6 @@
 ﻿using Octokit;
 using Spectre.Console;
+using src.common_index;
 using src.config;
 using src.modules;
 using src.utils;
@@ -19,16 +20,22 @@ namespace src.libraries
         public static async Task<LibraryConfig> GetLibraryConfig(string githubLink)
         {
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
+            return await GetLibraryConfig(repo);
+        }
+        public static async Task<LibraryConfig> GetLibraryConfig(GithubRepo repo)
+        {
             try
             {
                 Octokit.RepositoryContent config = (await Github.Repositories.Content.GetAllContentsByRef(repo.owner, repo.name, "premakeLibrary.yml", "main"))[0];
                 await DownloadUtils.DownloadStatus(config.DownloadUrl, $"Fetching library info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
                 return new LibraryConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
-            } catch (Octokit.NotFoundException) {
+            }
+            catch (Octokit.NotFoundException)
+            {
+                //default for when we are installing from a remote with no LibraryConfig
                 return new LibraryConfig() { name = repo.name, entryPoint = "premake5.lua", description = await Github.GetDescription(repo) };
             }
         }
-
         public static async Task GetLibrariesConfig(string[] githubLinks)
         {
             IList<Task<LibraryConfig>> tasks = new List<Task<LibraryConfig>>();
@@ -80,7 +87,6 @@ namespace src.libraries
         [RequiresUnreferencedCode("Calls src.config.ConfigReader.ConfigReader(String)")]
         public static async Task InstallLibraryCtx(ProgressContext ctx, string githubLink, string version = "*")
         {
-            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
 
             if (!githubLink.StartsWith("https://github.com/"))
             {
@@ -96,7 +102,9 @@ namespace src.libraries
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);
             await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {libconfig.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
-            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"{config.LibrariesPath}/{repo.name}", $"extracting {libconfig.name}");
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), await GetLibraryPath(repo), $"extracting {libconfig.name}");
+            await RemotesManager.InstallRemotesLibrary(repo);
+            
         }
 
         [RequiresUnreferencedCode("Calls src.libraries.LibraryManager.InstallLibraryCtx(ProgressContext, String, String)")]
@@ -140,6 +148,12 @@ namespace src.libraries
 
 
             throw new InvalidOperationException($"Could not resolve tag, branch, or commit '{version}' for repository {repo.owner}/{repo.name}.");
+        }
+
+        public static async Task<string> GetLibraryPath(GithubRepo library)
+        {
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+            return $"{config.Libraries}/{library.name}";
         }
     }
 }

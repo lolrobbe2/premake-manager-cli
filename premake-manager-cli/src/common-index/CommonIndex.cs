@@ -38,8 +38,36 @@ namespace src.common_index
             YamlSerializer.Serialize(index, filePath);
         }
 
+        public static MemoryStream? ReadLibraryFile(IndexView index, GithubRepo repo)
+        {
+            if (index.libraries.TryGetValue(repo.owner, out IList<IndexLibrary>? libraries))
+            {
+                if (null == libraries.Where((lib) => lib.name == repo.name).FirstOrDefault())
+                    return null;
+                GithubRepo remote = Github.GetRepoFromLink(index.remote);
+                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{repo}-main/{repo.owner}/{repo.name}/premake5.lua".ToLower());
+            }
+            return null; //could not find library.
+        }
+
+        /// <summary>
+        /// This function will attempt to Extract a premake5.lua from the given index
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="repo"></param>
+        /// <returns></returns>
+        public static async Task<bool> ExtractLibraryFile(IndexView index, GithubRepo repo)
+        {
+            MemoryStream? stream = ReadLibraryFile(index, repo);
+            if (stream == null) return false;
+
+            using (FileStream libraryFile = File.OpenWrite(await LibraryManager.GetLibraryPath(repo)){
+                stream.WriteTo(libraryFile);
+            }
+            return true;
+        }
         #endregion
-        
+
         #region REMOTE
         public static IndexView ReadRemoteIndex(string owner, string repo)
         {
@@ -50,6 +78,8 @@ namespace src.common_index
             return YamlSerializer.Deserialize<IndexView>(ExtractUtils.ReadFile(PathUtils.GetRemotePath(owner, repo), $"{repo}-main/premakeIndex.yml")!);
         }
         #endregion
+
+        #region CREATE
         public static IndexView CreateNew(string remoteName)
         {
             return new IndexView()
@@ -82,5 +112,7 @@ namespace src.common_index
             YamlSerializer.Serialize(library, Path.Combine(LibraryDirectory,"premakeLib.yml"));
             PathUtils.CreateEmpty(Path.Combine(LibraryDirectory, "premake5.lua"));  
         }
+        #endregion
+
     }
 }

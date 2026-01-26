@@ -1,4 +1,5 @@
-﻿using src.utils;
+﻿using src.config;
+using src.utils;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -109,18 +110,18 @@ namespace src.common_index
 
             //install the remotes
             (string url, string description, string destinationPath)[] downloads =
-      Remotes
-          .Select((Remote remote) =>
-          {
-              string url = $"https://github.com/{remote.Owner}/{remote.Repo}/archive/refs/heads/main.{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "zip" : "tar.gz")}";
-              string description = $"Downloading Remote: {remote.Owner}/{remote.Repo}";
-              return (
-                  url,
-                  description,
-                  PathUtils.GetRemotePath(remote.Owner, remote.Repo)
-              );
-          })
-          .ToArray();
+             Remotes
+              .Select((Remote remote) =>
+              {
+                  string url = $"https://github.com/{remote.Owner}/{remote.Repo}/archive/refs/heads/main.{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "zip" : "tar.gz")}";
+                  string description = $"Downloading Remote: {remote.Owner}/{remote.Repo}";
+                  return (
+                      url,
+                      description,
+                      PathUtils.GetRemotePath(remote.Owner, remote.Repo)
+                  );
+              })
+              .ToArray();
 
             await DownloadUtils.DownloadMultipleProgress(downloads);
             CreateTimestamp();
@@ -153,6 +154,19 @@ namespace src.common_index
 
             TimeSpan age = DateTime.UtcNow - timestamp;
             return age >= TimeSpan.FromDays(1);
+        }
+        /// <summary>
+        /// This function attempts to install the premake5.lua file
+        /// </summary>
+        /// <param name="repo">repo to attempt installation</param>
+        /// <returns>True on success</returns>
+        public static async Task InstallRemotesLibrary(GithubRepo repo)
+        {
+            //attempt to get the config to know where we have to copy the premake5.lua file to
+            foreach (RemoteIndex remote in GetEnabledRemoteIndices())
+            {
+                if (await CommonIndex.ExtractLibraryFile(remote.Index, repo)) return;
+            }
         }
     }
 }
