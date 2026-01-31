@@ -19,6 +19,9 @@ namespace src.dependencies
         [YamlMember]
         public IList<LibraryDependency>? libraries;
     }
+
+    //TODO Package Calculus
+
     //Add  dependencies
     internal class DependenciesManager
     {
@@ -129,10 +132,31 @@ namespace src.dependencies
         #endregion
 
         #region GRAPH
+        /// <summary>
+        /// This function resolves the dependecyGraph for the given list of premake libraries
+        /// </summary>
+        /// <param name="libraries"></param>
+        /// <returns></returns>
         public static DependencyGraph GetDependencyGraph(IList<PremakeLibrary> libraries)
         {
             IList<LibraryDependency> dependencies = GatherDependencies(libraries);
             return new DependencyGraph(dependencies.ToArray());
+        }
+        /// <summary>
+        /// This function fetches the versions from Github and resolves the correct version (if possible).
+        /// </summary>
+        /// <param name="graph">the dependecy graph to resolve the versions of</param>
+        /// <returns>a dictionary indexed, via the library name</returns>
+        public static async Task<IDictionary<string, string>> GetVersionsFromGraph(DependencyGraph graph)
+        {
+            IReadOnlyCollection<LibraryDependency> libraries = graph.GetResolvedLibraries();
+            foreach (LibraryDependency library in libraries)
+            {
+                GithubRepo repo = Github.GetRepoFromLink(library.name);
+                var versions = await Github.GetRepoVersions(repo);
+                //TODO
+
+            }
         }
         #endregion
     }

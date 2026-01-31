@@ -1,6 +1,8 @@
 ﻿using Octokit;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using src.dependencies;
+using src.dependencies.graph;
 using src.modules;
 using src.version;
 using System;
@@ -24,6 +26,11 @@ namespace src.config
             await VersionManager.SetVersion(config.Version);
             if(config.Modules != null)
                 await ModuleManager.InstallModules(config.Modules.Values.ToList());
+            //TODO dependencies
+            if(config.Libraries != null)
+            {
+                DependencyGraph graph = DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
+            }
             return 0;
         }
     }

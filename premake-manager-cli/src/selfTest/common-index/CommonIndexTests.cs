@@ -19,16 +19,16 @@ namespace src.selfTest.common_index
                 {
                     remote = "https://example.com",
                     libraries = new Dictionary<string, IList<IndexLibrary>>
-        {
-            { "premake", new List<IndexLibrary> {
-                new IndexLibrary { name = "premake-core", description = "Core premake functionality" },
-                new IndexLibrary { name = "premake-utils" }
-            }},
-            { "community", new List<IndexLibrary> {
-                new IndexLibrary { name = "imgui" },
-                new IndexLibrary { name = "spdlog", description = "Fast logging library" }
-            }}
-        }
+                    {
+                        { "premake", new List<IndexLibrary> {
+                            new IndexLibrary { name = "premake-core", description = "Core premake functionality" },
+                            new IndexLibrary { name = "premake-utils" }
+                        }},
+                        { "community", new List<IndexLibrary> {
+                            new IndexLibrary { name = "imgui" },
+                            new IndexLibrary { name = "spdlog", description = "Fast logging library" }
+                        }}
+                    }
                 };
 
                 Stream stream = CommonIndex.WriteStreamIndex(index);

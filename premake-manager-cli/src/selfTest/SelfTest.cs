@@ -19,7 +19,6 @@ namespace src.selfTest
             runner.AddTestClass<VersionManagerTests>();
             runner.AddTestClass<CommonIndexTests>();
             runner.AddTestClass<YamlSerializerTests>();
-
             await runner.RunAllAsync();
             return 0;
         }

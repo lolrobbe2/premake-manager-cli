@@ -53,5 +53,9 @@ namespace src
             Repository repository = await Repositories.Get(repo.owner, repo.name);
             return repository.Description;
         }
+        internal static async Task<IReadOnlyList<Release>> GetRepoVersions(GithubRepo repo)
+        {
+           return await Repositories.Release.GetAll(repo.owner, repo.name);
+        }
     }
 }
