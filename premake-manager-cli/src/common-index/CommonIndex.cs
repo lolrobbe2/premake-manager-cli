@@ -61,7 +61,8 @@ namespace src.common_index
             MemoryStream? stream = ReadLibraryFile(index, repo);
             if (stream == null) return false;
 
-            using (FileStream libraryFile = File.OpenWrite(await LibraryManager.GetLibraryPath(repo)){
+            using (FileStream libraryFile = File.OpenWrite(await LibraryManager.GetLibraryPath(repo)))
+            {
                 stream.WriteTo(libraryFile);
             }
             return true;
