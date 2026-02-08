@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Octokit;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -21,19 +22,21 @@ namespace src.utils
             return ((EnumMemberAttribute)attributes[0]).Value;
         }
     }
-    public enum ComparisonOperator
+    public enum ComparisonOperator : byte
     {
         [EnumMember(Value = "")]
-        None,
+        None = 0,
+        [EnumMember(Value = "=")]
+        Equal = 1,
         [EnumMember(Value = ">")]
-        GreaterThan,
-        [EnumMember(Value = "<")]
-        LessThan,
+        GreaterThan = 2,
         [EnumMember(Value = ">=")]
-        GreaterThanOrEqual,
+        GreaterThanOrEqual = 3,
+        [EnumMember(Value = "<")]
+        LessThan = 4,
         [EnumMember(Value = "<=")]
-        LessThanOrEqual,
-        Equal
+        LessThanOrEqual = 5,
+        
     }
 
     [DebuggerDisplay("{VersionArray[3]}.{VersionArray[2]}.{VersionArray[1]}.{VersionArray[0]}")]
@@ -72,6 +75,8 @@ namespace src.utils
         static public bool operator <(Version a, Version b) => a.VersionInt < b.VersionInt;
         static public bool operator >=(Version a, Version b) => a.VersionInt >= b.VersionInt;
         static public bool operator <=(Version a, Version b) => a.VersionInt <= b.VersionInt;
+        static public bool operator ==(Version a, Version b) => a.VersionInt == b.VersionInt;
+        static public bool operator !=(Version a, Version b) => a.VersionInt != b.VersionInt;
 
         #region EQUALS
         public bool Equals(Version? x, Version? y)
@@ -99,82 +104,6 @@ namespace src.utils
                 VersionArray[i] = byte.Parse(versionSections[i]);
             }
             VersionArray = VersionArray.Reverse().ToArray();//we need to reverse because we put the numbers in backwards
-        }
-    }
-    [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    internal class VersionRange
-    {
-        private string DebuggerDisplay
-        {
-            get
-            {
-                string startPart = $"{EnumHelper.GetEnumValue(OperatorStart)}{start}";
-
-                // Only add the end part if 'end' is not null or empty
-                string endPart = !string.IsNullOrEmpty(end?.ToString())
-                    ? $":{EnumHelper.GetEnumValue(OperatorEnd)}{end}"
-                    : string.Empty;
-
-                return $"{startPart}{endPart}";
-            }
-        }
-        Version? start { get; set; }//start of the range
-        Version? end { get; set; }//end of the range
-        ComparisonOperator OperatorStart { get; set; }
-        ComparisonOperator OperatorEnd { get; set; }
-        public VersionRange(ComparisonOperator OperatorStart, Version versionStart)
-        {
-            this.OperatorStart = OperatorStart;
-            start = versionStart;
-        }
-        public VersionRange(string OperatorStart, Version versionStart) : this(ParseOperator(OperatorStart), versionStart) { }
-        public VersionRange(ComparisonOperator OperatorStart, Version versionStart, ComparisonOperator OperatorEnd, Version versionEnd)
-        {
-            this.OperatorStart = OperatorStart;
-            start= versionStart;
-            this.OperatorEnd = OperatorEnd;
-            end = versionEnd;
-        }
-        public VersionRange(string OperatorStart, Version versionStart, string OperatorEnd, Version versionEnd) : this(ParseOperator(OperatorStart), versionStart, ParseOperator(OperatorEnd), versionEnd) { }
-
-        public static ComparisonOperator ParseOperator(string op) => op switch
-        {
-            ">" => ComparisonOperator.GreaterThan,
-            "<" => ComparisonOperator.LessThan,
-            ">=" => ComparisonOperator.GreaterThanOrEqual,
-            "<=" => ComparisonOperator.LessThanOrEqual,
-            "==" => ComparisonOperator.Equal,
-            _ => ComparisonOperator.None
-        };
-    }
-    internal class VersionUtils
-    {
-        /// <summary>
-        /// This function generates a VersionRange
-        /// </summary>
-        /// <param name="range"></param>
-        /// <returns></returns>
-        public static VersionRange GetRangeFromString(string range)
-        {
-            string[] splitRange = range.Split(":");
-            string? versionStart = splitRange.ElementAtOrDefault(0);
-            string? versionEnd = splitRange.ElementAtOrDefault(1);
-            string versionPattern = @"(\d(\.\d)+)";
-            string comparatorPattern = @"[><=!]+(?=\d)";
-
-            if(versionStart != null)
-            {
-                Version versionBegin = new Version(Regex.Matches(versionStart ?? "0.0.0.0", versionPattern).ElementAtOrDefault(0)!.Value);
-                string operatorBegin = Regex.Matches(versionStart ?? "0.0.0.0", comparatorPattern).ElementAtOrDefault(0)!.Value;
-                if (versionEnd != null)
-                {
-                    Version versionLimit = new Version(Regex.Matches(versionEnd ?? "0.0.0.0", versionPattern).ElementAtOrDefault(0)!.Value);
-                    string operatorLimit = Regex.Matches(versionEnd ?? "0.0.0.0", comparatorPattern).ElementAtOrDefault(0)!.Value;
-                }
-                return new VersionRange(operatorBegin, versionBegin);
-            }
-
-            return new VersionRange(ComparisonOperator.LessThan,new Version("3.1.1"));
         }
     }
 }

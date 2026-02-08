@@ -91,7 +91,7 @@ internal class DependencyGraphTests : ITestClass
             var libraries = new[] { libA1, libA2, libB1, libB2 };
             var graph = new DependencyGraph(libraries);
 
-            var resolved = graph.GetResolvedLibraries(); // function skips conflicts
+            var (resolved,conflict) = graph.GetResolvedLibraries(); // function skips conflicts
 
             // Check that lib/A is included
             if (!resolved.Any(l => l.name == "lib/A"))

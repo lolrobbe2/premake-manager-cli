@@ -1,4 +1,5 @@
-﻿using src.dependencies.graph;
+﻿using Semver;
+using src.dependencies.graph;
 using src.dependencies.types;
 using src.libraries;
 using src.utils;
@@ -149,12 +150,21 @@ namespace src.dependencies
         /// <returns>a dictionary indexed, via the library name</returns>
         public static async Task<IDictionary<string, string>> GetVersionsFromGraph(DependencyGraph graph)
         {
-            IReadOnlyCollection<LibraryDependency> libraries = graph.GetResolvedLibraries();
+            var(libraries,conflict) = graph.GetResolvedLibraries();
             foreach (LibraryDependency library in libraries)
             {
                 GithubRepo repo = Github.GetRepoFromLink(library.name);
                 var versions = await Github.GetRepoVersions(repo);
-                //TODO 
+                SemVersion[] semVersions = versions.Select((version) => SemVersion.Parse(version.TagName)).ToArray();
+
+                semVersions.Reverse(); //we reverse such that we can start with the greatest version
+
+                SemVersionRange range = SemVersionRange.Parse(library.version);
+                foreach (var item in semVersions)
+                {
+                    if(range.Contains(item))
+                        //TODO add and break;
+                }
 
             }
             return new Dictionary<string, string>();

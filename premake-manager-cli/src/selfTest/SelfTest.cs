@@ -19,7 +19,6 @@ namespace src.selfTest
             runner.AddTestClass<VersionManagerTests>();
             runner.AddTestClass<CommonIndexTests>();
             runner.AddTestClass<YamlSerializerTests>();
-            runner.AddTestClass<VersionUtilsTest>();
             await runner.RunAllAsync();
             return 0;
         }
@@ -43,7 +42,6 @@ namespace src.selfTest
             runner.AddTestClass<VersionManagerTests>();
             runner.AddTestClass<CommonIndexTests>();
             runner.AddTestClass<YamlSerializerTests>();
-            runner.AddTestClass<VersionUtilsTest>();
 
             // Determine which group to run
             string groupToRun = settings.GroupName;

@@ -15,9 +15,6 @@ namespace src.dependencies.types
         public string version { get; set; } // format: "*", "=x.y.z", ">x.y.z", "<x.y.z", ">=x.y.z", "<=x.y.z"
 
         public bool IsValid() => LibraryDependencyValidator.ValidateLibrary(name, version);
-
-        [YamlIgnore]
-        public VersionRange VersionRange => new VersionRange(version);
     }
 
     internal static class LibraryDependencyValidator
