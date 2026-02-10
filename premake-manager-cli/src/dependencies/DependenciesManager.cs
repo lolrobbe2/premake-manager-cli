@@ -169,18 +169,13 @@ namespace src.dependencies
                     foreach (RepositoryTag item in versions)
                     {
                         Match tagMatch = regex.Match(item.Name);
-                        if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version))
+                        if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version) && range.Contains(version))
                         {
-                            if (range.Contains(version))
-                            {
-                                resultLibraries.Add(library.name, version.ToString());
-                                continue;
-                            }
+                            resultLibraries.Add(library.name, version.ToString());
+                            continue;
+
                         }
                     }
-
-
-                    
                 }
                 catch (Exception e)
                 {

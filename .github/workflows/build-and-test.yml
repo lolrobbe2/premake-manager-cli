@@ -46,11 +46,11 @@ jobs:
         PUBLISH_DIR="${{ github.workspace }}/publish-artifacts"
 
         if [ "${{ runner.os }}" == "Windows" ]; then
-            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON "$PUBLISH_DIR" -o
+            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR" 
         elif [ "${{ runner.os }}" == "Linux" ]; then
-            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON "$PUBLISH_DIR" -o
+            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR"
         elif [ "${{ runner.os }}" == "macOS" ]; then
-            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON "$PUBLISH_DIR" -o
+            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR"
         fi
     - name: Run Self-Tests
       shell: bash
