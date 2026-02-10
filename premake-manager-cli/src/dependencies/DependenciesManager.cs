@@ -1,4 +1,6 @@
-﻿using Semver;
+﻿using Octokit;
+using Semver;
+using Spectre.Console;
 using src.dependencies.graph;
 using src.dependencies.types;
 using src.libraries;
@@ -8,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -151,23 +154,42 @@ namespace src.dependencies
         public static async Task<IDictionary<string, string>> GetVersionsFromGraph(DependencyGraph graph)
         {
             var(libraries,conflict) = graph.GetResolvedLibraries();
+            IDictionary<string,string> resultLibraries = new Dictionary<string,string>();
+            Regex regex = new Regex("v([0-9]+(\\.[0-9]+)+)", RegexOptions.IgnoreCase);
+
             foreach (LibraryDependency library in libraries)
             {
                 GithubRepo repo = Github.GetRepoFromLink(library.name);
-                var versions = await Github.GetRepoVersions(repo);
-                SemVersion[] semVersions = versions.Select((version) => SemVersion.Parse(version.TagName)).ToArray();
-
-                semVersions.Reverse(); //we reverse such that we can start with the greatest version
-
                 SemVersionRange range = SemVersionRange.Parse(library.version);
-                foreach (var item in semVersions)
+                try
                 {
-                    if(range.Contains(item))
-                        //TODO add and break;
-                }
+                    var versions = await Github.GetRepoTags(repo);
+                    IList<string> tags = new List<string>();
+                    //TODO use tryparse to only add valid versions
+                    foreach (RepositoryTag item in versions)
+                    {
+                        Match tagMatch = regex.Match(item.Name);
+                        if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version))
+                        {
+                            if (range.Contains(version))
+                            {
+                                resultLibraries.Add(library.name, version.ToString());
+                                continue;
+                            }
+                        }
+                    }
 
+
+                    
+                }
+                catch (Exception e)
+                {
+                    AnsiConsole.WriteLine($"{e.Message}");
+                }
+                //NO VERSION FOUND FOR RANGE
+                throw new InvalidOperationException("No valid version found for provided range");
             }
-            return new Dictionary<string, string>();
+            return resultLibraries;
         }
         #endregion
     }

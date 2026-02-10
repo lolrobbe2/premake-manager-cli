@@ -1,4 +1,5 @@
-﻿using src.dependencies.graph;
+﻿using src.dependencies;
+using src.dependencies.graph;
 using src.dependencies.types;
 using src.selfTest;
 using System;
@@ -105,5 +106,20 @@ internal class DependencyGraphTests : ITestClass
         }
         );
 
-    }
+        yield return ("Versions should be resolved correctly", async () =>
+        {
+            // Library A: no conflict
+            var libA1 = new LibraryDependency { name = "KhronosGroup/Vulkan-ValidationLayers", version = ">=1.4.330" };
+            var libA2 = new LibraryDependency { name = "KhronosGroup/Vulkan-ValidationLayers", version = "<1.4.332" };
+
+            var libraries = new[] { libA1, libA2 };
+            var graph = new DependencyGraph(libraries);
+
+            var result = await DependenciesManager.GetVersionsFromGraph(graph);
+            await Task.CompletedTask;
+
+        }
+        );
+
+        }
 }

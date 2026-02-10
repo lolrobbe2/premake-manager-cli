@@ -55,7 +55,11 @@ namespace src
         }
         internal static async Task<IReadOnlyList<Release>> GetRepoVersions(GithubRepo repo)
         {
-           return await Repositories.Release.GetAll(repo.owner, repo.name);
+            return await Repositories.Release.GetAll(repo.owner, repo.name);
+        }
+        internal static async Task<IReadOnlyList<RepositoryTag>> GetRepoTags(GithubRepo repo)
+        {
+            return await Repositories.GetAllTags(repo.owner, repo.name);
         }
     }
 }
