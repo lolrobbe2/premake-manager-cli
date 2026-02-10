@@ -93,7 +93,19 @@ namespace src.common_index
             Remotes = remotes.ToArray();
             await UpdateRemotes(true);
         }
+        /// <summary>
+        /// resets all the remotes to default
+        /// </summary>
+        /// <returns></returns>
+        public static void Reset()
+        {
+            string RemotePaths = Path.Combine(PathUtils.GetRoamingPath(), "premakeRemotes.yml");
 
+            if (Path.Exists(RemotePaths))
+            {
+                File.Delete(RemotePaths);
+            }
+        }
         /// <summary>
         /// This function checks how old the remotes are and updates them when needed
         /// </summary>

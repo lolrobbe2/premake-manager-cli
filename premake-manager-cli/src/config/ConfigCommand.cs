@@ -34,7 +34,6 @@ namespace src.config
                 var libs = await DependenciesManager.GetVersionsFromGraph(graph);
 
                 await LibraryManager.InstallLibraries(libs.ToList());
-                
             }
             return 0;
         }

@@ -155,5 +155,17 @@ namespace src.common_index
         }
     }
     #endregion
+
+    #region RESET
+    internal class RemotesResetCommand : AsyncCommand
+    {
+        public override Task<int> ExecuteAsync(CommandContext context)
+        {
+            RemotesManager.Reset();
+            AnsiConsole.MarkupLine("[green]Remotes have been reset to default[/]");
+            return Task.FromResult(0);
+        }
+    }
+    #endregion
     #endregion
 }

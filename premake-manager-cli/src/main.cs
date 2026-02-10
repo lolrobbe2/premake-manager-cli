@@ -112,6 +112,11 @@ namespace src
                           .WithDescription("Add a new local remote");
                     branch.AddCommand<common_index.RemotesUpdateCommand>("update")
                         .WithDescription("Update outdated remotes");
+                    branch.AddCommand<common_index.RemotesRemoveCommand>("remove")
+                      .WithDescription("Remove a remote");
+                    branch.AddCommand<common_index.RemotesResetCommand>("reset")
+                       .WithDescription("Reset remotes to default");
+
                 });
             });
 
