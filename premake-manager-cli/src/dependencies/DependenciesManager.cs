@@ -35,7 +35,7 @@ namespace src.dependencies
         /// </summary>
         /// <param name="repo">the repo to add the dependency to</param>
         /// <param name="dependency">dependency to add</param>
-        public async void AddLibraryDependency(GithubRepo repo, LibraryDependency dependency)
+        public static async Task AddLibraryDependency(GithubRepo repo, LibraryDependency dependency)
         {
             string LibraryDirectory = Path.Combine([Directory.GetCurrentDirectory(), "libraries", repo.owner, repo.name]).ToLower();
             string LibraryDependencies = Path.Combine(LibraryDirectory, "premakeDependencies.yml");

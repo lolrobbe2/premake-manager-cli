@@ -101,7 +101,10 @@ namespace src
                         branch.AddBranch("uri", uriBranch =>
                         {
                             uriBranch.AddCommand<common_index.CommonAddUriLibCommand>("library").WithDescription("Add a library from a github uri to the local index");
+                            
                         });
+                        branch.AddCommand<common_index.CommonAddDependencyCommand>("dependency").WithDescription("Add a dependency to a local index library");
+
                     });
                 });
                 config.AddBranch("remotes", branch => {

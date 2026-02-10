@@ -1,6 +1,8 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
 using src.config;
+using src.dependencies;
+using src.dependencies.types;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -126,7 +128,7 @@ namespace src.common_index
             if (string.IsNullOrEmpty(repo.name))
                 return ValidationResult.Error("the repo name name should be valid");
 
-        
+
             return ValidationResult.Success();
 
         }
@@ -140,6 +142,64 @@ namespace src.common_index
 
             CommonIndex.CreateNewLibrary(ref index, library, libRepo.owner);
             CommonIndex.WriteFileIndex(index);
+            return 0;
+        }
+    }
+
+    internal class CommonAddDependencyCommand : AsyncCommand<CommonAddDependencyCommand.Settings>
+    {
+        internal class Settings : CommandSettings
+        {
+            [CommandArgument(0, "[githublink]")]
+            [Description("The GitHub link of the library or the owner/repo.")]
+            public string? githublink { get; set; } = "";
+            [CommandArgument(0, "[OWNER]")]
+            [Description("the owner of the dependency (github name)")]
+            public string? owner { get; set; }
+            [CommandArgument(0, "[REPO]")]
+            [Description("the name of the dependency")]
+            public string? repo { get; set; }
+
+            [CommandArgument(0, "[RANGE]")]
+            [Description("the version range of the dependency")]
+            public string? range { get; set; }
+        }
+
+        public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
+        {
+            if(string.IsNullOrEmpty(settings.githublink))
+            {
+                settings.githublink = AnsiConsole.Prompt(new TextPrompt<string>("[green]library githublink: [/]"));
+            }
+            if (settings.githublink!.StartsWith("https://github.com/"))
+                return ValidationResult.Error("the link should start with https://github.com/");
+            GithubRepo repo = Github.GetRepoFromLink(settings.githublink);
+            if (string.IsNullOrEmpty(repo.owner))
+                return ValidationResult.Error("the repo owner name should be valid");
+
+            if (string.IsNullOrEmpty(repo.name))
+                return ValidationResult.Error("the repo name name should be valid");
+
+            if (string.IsNullOrEmpty(settings.owner))
+            {
+                settings.owner = AnsiConsole.Prompt(new TextPrompt<string>("[green]owner: [/]"));
+            }
+            if (string.IsNullOrEmpty(settings.repo))
+            {
+                settings.owner = AnsiConsole.Prompt(new TextPrompt<string>("[green]repo: [/]"));
+            }
+            if (string.IsNullOrEmpty(settings.range))
+            {
+                settings.range = AnsiConsole.Prompt(new TextPrompt<string>("[green]range: [/]"));
+            }
+            return ValidationResult.Success();
+
+        }
+
+        public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+        {
+            GithubRepo libRepo = Github.GetRepoFromLink(settings.githublink!);
+            await DependenciesManager.AddLibraryDependency(libRepo, new LibraryDependency { name = $"{settings.owner}/{settings.repo}", version = settings.range });
             return 0;
         }
     }
