@@ -60,3 +60,4 @@ nunit-*.xml
 /.vs/**
 settings.json
 /Nieuw - Tekstdocument.txt
+premake-manager-cli/premake-manager-cli.csproj.Backup.tmp
