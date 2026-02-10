@@ -3,6 +3,7 @@ using Spectre.Console;
 using Spectre.Console.Cli;
 using src.dependencies;
 using src.dependencies.graph;
+using src.libraries;
 using src.modules;
 using src.version;
 using System;
@@ -30,6 +31,10 @@ namespace src.config
             if(config.Libraries != null)
             {
                 DependencyGraph graph = DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
+                var libs = await DependenciesManager.GetVersionsFromGraph(graph);
+
+                await LibraryManager.InstallLibraries(libs.ToList());
+                
             }
             return 0;
         }

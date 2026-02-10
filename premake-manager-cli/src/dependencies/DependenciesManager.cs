@@ -151,10 +151,10 @@ namespace src.dependencies
         /// </summary>
         /// <param name="graph">the dependecy graph to resolve the versions of</param>
         /// <returns>a dictionary indexed, via the library name</returns>
-        public static async Task<IDictionary<string, string>> GetVersionsFromGraph(DependencyGraph graph)
+        public static async Task<PremakeLibrary[]> GetVersionsFromGraph(DependencyGraph graph)
         {
             var(libraries,conflict) = graph.GetResolvedLibraries();
-            IDictionary<string,string> resultLibraries = new Dictionary<string,string>();
+            IList<PremakeLibrary> resultLibraries = new List<PremakeLibrary>();
             Regex regex = new Regex("v([0-9]+(\\.[0-9]+)+)", RegexOptions.IgnoreCase);
 
             foreach (LibraryDependency library in libraries)
@@ -171,20 +171,20 @@ namespace src.dependencies
                         Match tagMatch = regex.Match(item.Name);
                         if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version) && range.Contains(version))
                         {
-                            resultLibraries.Add(library.name, version.ToString());
+                            resultLibraries.Add(new PremakeLibrary(version.ToString(),library.name));
                             continue;
-
                         }
                     }
+                    AnsiConsole.WriteLine($"[red]Library: {library.name}, not found[/]");
                 }
                 catch (Exception e)
                 {
-                    AnsiConsole.WriteLine($"{e.Message}");
+                    AnsiConsole.WriteLine($"Library not found");
                 }
                 //NO VERSION FOUND FOR RANGE
                 throw new InvalidOperationException("No valid version found for provided range");
             }
-            return resultLibraries;
+            return resultLibraries.ToArray();
         }
         #endregion
     }
