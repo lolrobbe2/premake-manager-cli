@@ -46,7 +46,7 @@ namespace src.utils
             downloadTask.StartTask();
 
             destinationPath = destinationPath.Replace("\\", "/");
-            string destinationDir = Path.GetDirectoryName(destinationPath);
+            string destinationDir = Path.GetDirectoryName(destinationPath)!;
             if (!Directory.Exists(destinationDir))
                 Directory.CreateDirectory(destinationDir);
             else
@@ -105,7 +105,7 @@ namespace src.utils
             ctx.SpinnerStyle(Style.Parse("green"));
 
             destinationPath = destinationPath.Replace("\\", "/");
-            string destinationDir = Path.GetDirectoryName(destinationPath);
+            string destinationDir = Path.GetDirectoryName(destinationPath)!;
             if (!Directory.Exists(destinationDir))
                 Directory.CreateDirectory(destinationDir);
             else

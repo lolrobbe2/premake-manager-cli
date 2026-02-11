@@ -35,7 +35,7 @@ namespace src.common_index
                          if (string.IsNullOrWhiteSpace(input))
                              return ValidationResult.Error("Url cannot be empty");
 
-                         if (!Uri.TryCreate(input, UriKind.Absolute, out Uri uri))
+                         if (!Uri.TryCreate(input, UriKind.Absolute, out Uri? uri))
                              return ValidationResult.Error("Invalid url format");
 
                          if (!string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
@@ -199,7 +199,7 @@ namespace src.common_index
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
             GithubRepo libRepo = Github.GetRepoFromLink(settings.githublink!);
-            await DependenciesManager.AddLibraryDependency(libRepo, new LibraryDependency { name = $"{settings.owner}/{settings.repo}", version = settings.range });
+            await DependenciesManager.AddLibraryDependency(libRepo, new LibraryDependency { name = $"{settings.owner}/{settings.repo}", version = settings.range! });
             return 0;
         }
     }

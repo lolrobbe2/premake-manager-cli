@@ -177,7 +177,7 @@ namespace src.dependencies
                     }
                     AnsiConsole.WriteLine($"[red]Library: {library.name}, not found[/]");
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     AnsiConsole.WriteLine($"Library not found");
                 }
