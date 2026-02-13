@@ -48,7 +48,7 @@ namespace src.dependencies
             dependencies.libraries.Add(dependency);
             #endregion
             
-            YamlSerializer.Serialize(dependencies, LibraryDirectory);
+            YamlSerializer.Serialize(dependencies, LibraryDependencies);
         }
         /// <summary>
         /// Remove a library from the repo dependecies
