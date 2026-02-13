@@ -120,6 +120,23 @@ internal class DependencyGraphTests : ITestClass
 
         }
         );
+        // Test 2: Adding dependencies
+        yield return ("Add Dependencies with @version should get parent range", async () =>
+        {
+            var libA = new LibraryDependency { name = "glfw/glfw", version = ">=3.3.0" };
+            var libB = new LibraryDependency { name = "vulkan/vulkan", version = "@" };
+            var libC = new LibraryDependency { name = "ocornut/imgui", version = "=1.90.0" };
 
+            var graph = new DependencyGraph(new[] { libA, libB, libC });
+            graph.AddDependency(libC, libA);
+            graph.AddDependency(libC, libB);
+
+            var deps = graph.GetDependencies(libC);
+            if (deps.ElementAt(1).version != "=1.90.0")
+                throw new Exception("when dependency version is @ it should be repalced by its parent version");
+
+            await Task.CompletedTask;
         }
+        );
+    }
 }

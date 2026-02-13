@@ -171,7 +171,7 @@ namespace src.common_index
             {
                 settings.githublink = AnsiConsole.Prompt(new TextPrompt<string>("[green]library githublink: [/]"));
             }
-            if (settings.githublink!.StartsWith("https://github.com/"))
+            if (!settings.githublink!.StartsWith("https://github.com/"))
                 return ValidationResult.Error("the link should start with https://github.com/");
             GithubRepo repo = Github.GetRepoFromLink(settings.githublink);
             if (string.IsNullOrEmpty(repo.owner))

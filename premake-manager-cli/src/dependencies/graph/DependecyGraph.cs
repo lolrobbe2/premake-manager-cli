@@ -30,6 +30,9 @@ namespace src.dependencies.graph
             if (!_graph.ContainsKey(dependsOn))
                 _graph[dependsOn] = new HashSet<LibraryDependency>();
 
+            if (dependsOn.version == "@")
+                dependsOn.version = library.version;
+
             _graph[library].Add(dependsOn);
         }
 

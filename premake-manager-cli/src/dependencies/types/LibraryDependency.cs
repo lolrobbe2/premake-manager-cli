@@ -12,7 +12,7 @@ namespace src.dependencies.types
         public string name { get; set; } // format: <owner>/<repo_name>
 
         [YamlMember]
-        public string version { get; set; } // format: "*", "=x.y.z", ">x.y.z", "<x.y.z", ">=x.y.z", "<=x.y.z"
+        public string version { get; set; } // format: "*", "=x.y.z", ">x.y.z", "<x.y.z", ">=x.y.z", "<=x.y.z", "@ => parent version"
 
         public bool IsValid() => LibraryDependencyValidator.ValidateLibrary(name, version);
     }
