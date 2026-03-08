@@ -84,6 +84,21 @@ namespace src
                     branch.AddCommand<modules.ModuleRemoveCommand>("remove");
                 });
 
+                config.AddBranch("library", branch =>
+                {
+                    branch.SetDescription("Manage premake libraries");
+                    branch.AddCommand<libraries.LibraryInfoCommand>("info")
+                          .WithDescription("get the info from a library");
+
+                    branch.AddCommand<libraries.LibraryInstallCommand>("install")
+                          .WithDescription("install a library given its github link");
+
+                    branch.AddCommand<libraries.LibraryAddCommand>("add")
+                          .WithDescription("add a library to the confiuration");
+
+                    branch.AddCommand<libraries.LibraryRemoveCommand>("remove");
+                });
+
                 config.AddBranch("test", branch =>
                 {
                     branch.SetDescription("The Premake Manager selftest commands");
