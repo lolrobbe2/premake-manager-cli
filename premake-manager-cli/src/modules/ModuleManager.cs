@@ -21,6 +21,13 @@ namespace src.modules
             await DownloadUtils.DownloadStatus(config.DownloadUrl, $"Fetching module info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
             return new ModuleConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
         }
+        public static async Task<ModuleConfig> GetModuleConfigCtx(ProgressContext ctx,string githubLink)
+        {
+            GithubRepo repo = Github.GetRepoFromLink(githubLink);
+            Octokit.RepositoryContent config = (await Github.Repositories.Content.GetAllContentsByRef(repo.owner, repo.name, "premakeModule.yml", "main"))[0];
+            await DownloadUtils.DownloadProgressCtx(ctx,config.DownloadUrl, $"Fetching module info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
+            return new ModuleConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
+        }
 
         public static async Task GetModulesConfig(string[] githubLinks)
         {
@@ -80,7 +87,7 @@ namespace src.modules
 
             if (string.IsNullOrEmpty(version))
                 version = "*";
-            ModuleConfig config = await GetModuleConfig(githubLink);
+            ModuleConfig config = await GetModuleConfigCtx(ctx,githubLink);
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);

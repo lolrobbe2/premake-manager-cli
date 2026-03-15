@@ -78,6 +78,8 @@ namespace src.utils
                         totalBytesRead += bytesRead;
                         downloadTask.Value += bytesRead;
                     }
+                    /* flush otherwise there can be issues reading later on*/
+                    await fileStream.FlushAsync();
                     contentStream.Close();
                 }
             }

@@ -1,12 +1,16 @@
-﻿using Semver;
+﻿using Octokit;
+using Semver;
 using Spectre.Console;
 using src.dependencies.types;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace src.dependencies.graph
 {
+    [DebuggerDisplay("Count = {_graph.Count} (Libraries)")]
+    [DebuggerTypeProxy(typeof(DependencyGraphDebugProxy))]
     internal class DependencyGraph
     {
         private readonly Dictionary<LibraryDependency, HashSet<LibraryDependency>> _graph
@@ -36,6 +40,14 @@ namespace src.dependencies.graph
             _graph[library].Add(dependsOn);
         }
 
+        public void AddDependencies(LibraryDependency library, IEnumerable<LibraryDependency> dependencies)
+        {
+            foreach (var dependency in dependencies)
+            {
+                AddDependency(library, dependency);
+            }
+        }
+
         public IReadOnlyCollection<LibraryDependency> GetDependencies(LibraryDependency library) =>
             _graph.TryGetValue(library, out var deps) ? deps : Array.Empty<LibraryDependency>();
 
@@ -49,8 +61,8 @@ namespace src.dependencies.graph
             return conflict!;
         }
 
-       
-        public (IReadOnlyCollection<LibraryDependency>, IReadOnlyDictionary<string,LibraryDependency>) GetResolvedLibraries()
+
+        public (IReadOnlyCollection<LibraryDependency>, IReadOnlyDictionary<string, LibraryDependency>) GetResolvedLibraries()
         {
             // Include all libraries
             var allDeps = _graph.Keys.Concat(_graph.SelectMany(kv => kv.Value)).ToList();
@@ -58,7 +70,7 @@ namespace src.dependencies.graph
             //contains all resolved non conflicting libraries.
             var resolved = new List<LibraryDependency>();
             //contains all conflicting libraries.
-            var conflict = new Dictionary<string,LibraryDependency>();
+            var conflict = new Dictionary<string, LibraryDependency>();
 
             AnsiConsole.Progress()
                     .AutoClear(false)
@@ -68,7 +80,6 @@ namespace src.dependencies.graph
                         var task = ctx.AddTask("Checking dependencies...", maxValue: allDeps.Count);
 
                         var groups = allDeps.GroupBy(lib => lib.name);
-
                         foreach (var group in groups)
                         {
                             SemVersionRange final = SemVersionRange.Empty;
@@ -79,7 +90,7 @@ namespace src.dependencies.graph
                                     final = SemVersionRange.Parse($"{final} {range}");
                                 else
                                     final = SemVersionRange.Parse($"{range}");
-                                
+
                                 if (final == SemVersionRange.Empty)
                                 {
 
@@ -90,24 +101,65 @@ namespace src.dependencies.graph
                                     });
                                     break;
                                 }
-                                
+
 
                             }
                             if (final == SemVersionRange.Empty)
                                 continue;
-                            resolved.Add(new LibraryDependency()
+                            if (resolved.Find(dep => dep.name == group.Key) is not null)
                             {
-                                name = group.Key,
-                                version = final.ToString()
-                            });
-
+                                conflict.Add(group.Key, new LibraryDependency()
+                                {
+                                    name = group.Key,
+                                    version = final.ToString()
+                                });
+                            }
+                            else
+                            {
+                                resolved.Add(new LibraryDependency()
+                                {
+                                    name = group.Key,
+                                    version = final.ToString()
+                                });
+                            }
+                            task.Increment(1);
+                            ctx.Refresh();
                         }
-                    
-                        task.Increment(1);
-                        ctx.Refresh();
+
+
                     });
 
-            return (resolved,conflict);
+            return (resolved, conflict);
+        }
+
+        internal class DependencyGraphDebugProxy
+        {
+            private readonly DependencyGraph _graphObj;
+
+            public DependencyGraphDebugProxy(DependencyGraph graphObj)
+            {
+                _graphObj = graphObj;
+            }
+
+            // This shows up as a "Libraries" node you can expand
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public DependencyEntry[] Libraries => _graphObj.GetAllLibraries()
+                .Select(lib => new DependencyEntry(lib, _graphObj.GetDependencies(lib)))
+                .ToArray();
+        }
+
+        // A helper class just for the debugger view
+        [DebuggerDisplay("{Library.name,nq} -> {Dependencies.Count} deps")]
+        internal class DependencyEntry
+        {
+            public LibraryDependency Library { get; }
+            public IReadOnlyCollection<LibraryDependency> Dependencies { get; }
+
+            public DependencyEntry(LibraryDependency lib, IReadOnlyCollection<LibraryDependency> deps)
+            {
+                Library = lib;
+                Dependencies = deps;
+            }
         }
     }
 }

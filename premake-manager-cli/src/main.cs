@@ -15,14 +15,31 @@ namespace src
     {
         static async Task Main(string[] args)
         {
+            string sessionToken = "";
 #if DEBUG
             bool interactive = true;
 #else
             bool interactive = false;
 #endif
-            if (args.Length > 0 && args[0] == "--interactive")
-                interactive = true;
+            foreach (var arg in args)
+            {
+                if (arg == "--interactive")
+                {
+                    interactive = true;
+                }
+                if (arg.StartsWith("--session="))
+                {
+                    // Extracts the part after "--session="
+                    sessionToken = arg.Substring("--session=".Length).Trim('"');
+                    Console.WriteLine(sessionToken);
 
+                    await Github.SetSession(sessionToken);
+
+                }
+
+            }
+           
+            
             Console.CancelKeyPress += (sender, e) =>
             {
                 PathUtils.ClearDirectory(PathUtils.GetTempPath());

@@ -11,6 +11,15 @@ namespace src.config
 {
     internal sealed class Config
     {
+        #region internal
+        /**
+         * this is used as when the libries are set we need to construct them and fill in the names etc
+         */
+        private IDictionary<string, PremakeLibrary>? _libraries;
+        private IDictionary<string, PremakeModule>? _modules { get; set; }
+
+        #endregion
+
         [YamlMember(Alias = "version")]
         public string Version { get; set; } = string.Empty;
 
@@ -21,11 +30,39 @@ namespace src.config
         public string? LibrariesPath { get; set; }
 
         [YamlMember(Alias = "modules")]
-        public IDictionary<string, PremakeModule>? Modules { get; set; }
-
+        public IDictionary<string, PremakeModule>? Modules
+        {
+            get => _modules;
+            set
+            {
+                _modules = value;
+                if (_modules != null)
+                {
+                    foreach (var kvp in _modules)
+                    {
+                        // Inject the key into the object automatically
+                        kvp.Value.module = kvp.Key;
+                    }
+                }
+            }
+        }
         [YamlMember(Alias = "libraries")]
-        public IDictionary<string, PremakeLibrary>? Libraries { get; set; }
-
+        public IDictionary<string, PremakeLibrary>? Libraries
+        {
+            get => _libraries;
+            set
+            {
+                _libraries = value;
+                if (_libraries != null)
+                {
+                    foreach (var kvp in _libraries)
+                    {
+                        // Inject the key into the object automatically
+                        kvp.Value.library = kvp.Key;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Adds a module to the Configuration

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,7 +8,8 @@ using YamlDotNet.Serialization;
 
 namespace src.libraries
 {
-    internal class PremakeLibrary
+    [DebuggerDisplay("{owner}/{repo}")]
+    public class PremakeLibrary
     {
         [YamlIgnore]
         public string repo { get => getRepo(); set => setRepo(value); }

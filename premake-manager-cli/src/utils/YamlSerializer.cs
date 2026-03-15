@@ -3,6 +3,7 @@ using src.common_index;
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -34,16 +35,16 @@ namespace src.utils
             return Deserialize<T>(stream);
         }
 
-        public static T Deserialize<T>(string owner, string repo, string filePath)
+        public static async Task<T> Deserialize<T>(string owner, string repo, string filePath)
         {
             string url = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/master/" + $"{filePath}";
 
             using HttpClient client = new HttpClient();
-            HttpResponseMessage response = client.GetAsync(url).Result;
+            HttpResponseMessage response = await client.GetAsync(url);
 
             response.EnsureSuccessStatusCode();
 
-            using Stream stream = response.Content.ReadAsStreamAsync().Result;
+            using Stream stream = await response.Content.ReadAsStreamAsync();
             return Deserialize<T>(stream);
         }
 

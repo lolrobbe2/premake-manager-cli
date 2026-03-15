@@ -56,7 +56,7 @@ namespace src.libraries
         }
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            await LibraryManager.InstallLibrary(settings.githublink, settings.version);
+            await LibraryManager.InstallLibrary(settings.githublink, settings.version ?? "*");
             return 0;
         }
 
@@ -99,7 +99,7 @@ namespace src.libraries
                 ctx.Spinner(Spinner.Known.Aesthetic);
                 ctx.SpinnerStyle(Style.Parse("green"));
                 
-                config.AddLibrary(new PremakeLibrary() { owner = libraryString[0], repo = libraryString[1], version = settings.version });
+                config.AddLibrary(new PremakeLibrary() { owner = libraryString[0], repo = libraryString[1], version = settings.version ?? "*"});
             });
             ConfigManager.WriteConfig(config,null);
             return 0;
@@ -116,6 +116,8 @@ namespace src.libraries
         }
 
         [RequiresUnreferencedCode("Calls src.config.ConfigReader.ConfigReader(String)")]
+        [UnconditionalSuppressMessage("Trimming", "IL2026",
+    Justification = "Reflection in ConfigManager is manually preserved via DynamicDependency")]
         public override ValidationResult Validate([NotNull] CommandContext context, [NotNull] Settings settings)
         {
             if (string.IsNullOrEmpty(settings.githublink))

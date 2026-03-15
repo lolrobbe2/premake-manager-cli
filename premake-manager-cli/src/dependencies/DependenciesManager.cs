@@ -1,6 +1,7 @@
 ﻿using Octokit;
 using Semver;
 using Spectre.Console;
+using src.common_index;
 using src.dependencies.graph;
 using src.dependencies.types;
 using src.libraries;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -73,63 +75,89 @@ namespace src.dependencies
 
         #region GATHER_DEPENDENCIES
 
-        private static IList<LibraryDependency> GatherDependencies(IList<PremakeLibrary> libraries)
+        private static async Task<IList<LibraryDependency>> GatherDependencies(PremakeLibrary library)
         {
             List<LibraryDependency> libraryDependencies = new List<LibraryDependency>();
-            foreach (var library in libraries)
-            {
-                IList<LibraryDependency> dependencies = GatherLibraryDependencies(library);   
-                libraryDependencies.AddRange(dependencies);
-                libraryDependencies.AddRange(GatherSubDependencies(dependencies));
-            }
+
+            IList<LibraryDependency> dependencies = await GatherLibraryDependencies(library);
+            libraryDependencies.AddRange(dependencies);
+            libraryDependencies.AddRange(await GatherSubDependencies(dependencies));
+
             return libraryDependencies;
         }
-        private static IList<LibraryDependency> GatherSubDependencies(IList<LibraryDependency> dependencies)
+        private static async Task<IList<LibraryDependency>> GatherSubDependencies(IList<LibraryDependency> dependencies)
         {
             List<LibraryDependency> libraryDependencies = new List<LibraryDependency>();
             foreach (var library in dependencies)
             {
-                IList<LibraryDependency> subDependencies = GatherLibrarySubDependencies(library);
+                IList<LibraryDependency> subDependencies = await GatherLibrarySubDependencies(library);
                 libraryDependencies.AddRange(subDependencies);
-                libraryDependencies.AddRange(GatherSubDependencies(subDependencies));
+                libraryDependencies.AddRange(await GatherSubDependencies(subDependencies));
             }
             return libraryDependencies;
         }
         #region INDIVIDUAL
-        private static IList<LibraryDependency> GatherLibraryDependencies(PremakeLibrary library)
+        private static async Task<IList<LibraryDependency>> GatherLibraryDependencies(PremakeLibrary library)
         {
             //NOTE: dependencies must either be defined in the remoteIndex or in the github repo itself
             //1) check local remotes.
             //2) check github for dependencies
+            GithubRepo repo = Github.GetRepoFromLink(library.getLink());
             #region CHECK_REMOTES
-            string LibraryDirectory = Path.Combine([Directory.GetCurrentDirectory(), "libraries", library.owner, library.repo]).ToLower();
-            string LibraryDependencies = Path.Combine(LibraryDirectory, "premakeDependencies.yml");
-
-            if (Path.Exists(LibraryDependencies))
-                return YamlSerializer.Deserialize<Dependencies>(LibraryDependencies).libraries;
+            Dependencies? dependencies = RemotesManager.GetDependencies(repo);
+            if (dependencies is not null)
+            {
+                return dependencies.libraries;
+            }
             #endregion
 
             #region CHECK_GITHUB
-                return YamlSerializer.Deserialize<Dependencies>(library.owner, library.repo, LibraryDependencies).libraries;
+            /* DO NOT SUPPORT THIS AS WE WILL QUICKLY HOT THE RATE LIMIT */
+            /*
+            string LibraryGitDirectory = Path.Combine(["libraries", repo.owner, repo.name]).ToLower();
+            string LibraryGitDependencies = Path.Combine(LibraryGitDirectory, "premakeDependencies.yml");
+            try
+            {
+                return (await YamlSerializer.Deserialize<Dependencies>(repo.owner, repo.name, LibraryGitDependencies)).libraries;
+            }
+            catch (HttpRequestException)
+            {
+                return new List<LibraryDependency>(); //return empty list when no dependencies where found.
+            }
+            */
+            return new List<LibraryDependency>();
             #endregion
         }
 
-        private static IList<LibraryDependency> GatherLibrarySubDependencies(LibraryDependency library)
+        private static async Task<IList<LibraryDependency>> GatherLibrarySubDependencies(LibraryDependency library)
         {
             //NOTE: dependencies must either be defined in the remoteIndex or in the github repo itself
             //1) check local remotes.
             //2) check github for dependencies
             GithubRepo repo = Github.GetRepoFromLink(library.name);
             #region CHECK_REMOTES
-            string LibraryDirectory = Path.Combine([Directory.GetCurrentDirectory(), "libraries", repo.owner, repo.name]).ToLower();
-            string LibraryDependencies = Path.Combine(LibraryDirectory, "premakeDependencies.yml");
-
-            if (Path.Exists(LibraryDependencies))
-                return YamlSerializer.Deserialize<Dependencies>(LibraryDependencies).libraries;
+            Dependencies? dependencies  = RemotesManager.GetDependencies(repo);
+            if(dependencies is not null)
+            {
+                return dependencies.libraries;
+            }
             #endregion
 
             #region CHECK_GITHUB
-            return YamlSerializer.Deserialize<Dependencies>(repo.owner, repo.name, LibraryDependencies).libraries;
+            /* DO NOT SUPPORT THIS AS WE WILL QUICKLY HOT THE RATE LIMIT */
+            /*
+            string LibraryGitDirectory = Path.Combine(["libraries", repo.owner, repo.name]).ToLower();
+            string LibraryGitDependencies = Path.Combine(LibraryGitDirectory, "premakeDependencies.yml");
+            try
+            {
+                return (await YamlSerializer.Deserialize<Dependencies>(repo.owner, repo.name, LibraryGitDependencies)).libraries;
+            }
+            catch (HttpRequestException)
+            {
+                return new List<LibraryDependency>(); //return empty list when no dependencies where found.
+            }
+            */
+            return new List<LibraryDependency>();
             #endregion
         }
         #endregion
@@ -141,10 +169,16 @@ namespace src.dependencies
         /// </summary>
         /// <param name="libraries"></param>
         /// <returns></returns>
-        public static DependencyGraph GetDependencyGraph(IList<PremakeLibrary> libraries)
+        public static async Task<DependencyGraph> GetDependencyGraph(IList<PremakeLibrary> libraries)
         {
-            IList<LibraryDependency> dependencies = GatherDependencies(libraries);
-            return new DependencyGraph(dependencies.ToArray());
+            IList<KeyValuePair<PremakeLibrary,LibraryDependency>> rootDependencies = libraries.Select((library) => new KeyValuePair<PremakeLibrary, LibraryDependency>(library ,new LibraryDependency() { name = library.library!, version = library.version })).ToList();
+            DependencyGraph graph = new DependencyGraph(rootDependencies.Select((dep)=> dep.Value).ToArray());
+            foreach (KeyValuePair<PremakeLibrary, LibraryDependency> dependency in rootDependencies)
+            {
+                graph.AddDependencies(dependency.Value,await GatherDependencies(dependency.Key));   
+            }
+            return graph;
+
         }
         /// <summary>
         /// This function fetches the versions from Github and resolves the correct version (if possible).
@@ -155,7 +189,7 @@ namespace src.dependencies
         {
             var(libraries,conflict) = graph.GetResolvedLibraries();
             IList<PremakeLibrary> resultLibraries = new List<PremakeLibrary>();
-            Regex regex = new Regex("v([0-9]+(\\.[0-9]+)+)", RegexOptions.IgnoreCase);
+            Regex regex = new Regex(@"(\d+\.\d+\.\d+)", RegexOptions.IgnoreCase);
 
             foreach (LibraryDependency library in libraries)
             {
@@ -164,7 +198,7 @@ namespace src.dependencies
                 try
                 {
                     var versions = await Github.GetRepoTags(repo);
-                    IList<string> tags = new List<string>();
+                    bool found = false;
                     //TODO use tryparse to only add valid versions
                     foreach (RepositoryTag item in versions)
                     {
@@ -172,10 +206,12 @@ namespace src.dependencies
                         if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version) && range.Contains(version))
                         {
                             resultLibraries.Add(new PremakeLibrary(version.ToString(),library.name));
-                            continue;
+                            found = true;
+                            break;
                         }
                     }
-                    AnsiConsole.WriteLine($"[red]Library: {library.name}, not found[/]");
+                    if (found)
+                        continue;
                 }
                 catch (Exception)
                 {

@@ -92,7 +92,7 @@ namespace src.version
         }
         #endregion
 
-        public static async Task<bool> SetVersion(string tagName)
+        public static async Task<bool>  SetVersion(string tagName)
         {
             Release? release = await GetVersion(tagName);
             string path = PathUtils.GetReleasePath(release!);

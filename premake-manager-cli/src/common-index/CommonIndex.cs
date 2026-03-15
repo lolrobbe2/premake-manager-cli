@@ -45,7 +45,19 @@ namespace src.common_index
                 if (null == libraries.Where((lib) => lib.name == repo.name).FirstOrDefault())
                     return null;
                 GithubRepo remote = Github.GetRepoFromLink(index.remote);
-                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{repo}-main/{repo.owner}/{repo.name}/premake5.lua".ToLower());
+                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{repo}-main/libraries/{repo.owner}/{repo.name}/premake5.lua".ToLower());
+            }
+            return null; //could not find library.
+        }
+
+        public static MemoryStream? ReadLibraryDependencies(IndexView index, GithubRepo repo)
+        {
+            if (index.libraries.TryGetValue(repo.owner, out IList<IndexLibrary>? libraries))
+            {
+                if (null == libraries.Where((lib) => lib.name == repo.name).FirstOrDefault())
+                    return null;
+                GithubRepo remote = Github.GetRepoFromLink(index.remote);
+                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{remote.name}-main/libraries/{repo.owner}/{repo.name}/premakeDependencies.yml");
             }
             return null; //could not find library.
         }
@@ -70,9 +82,9 @@ namespace src.common_index
         #endregion
 
         #region REMOTE
-        public static IndexView ReadRemoteIndex(string owner, string repo)
+        public static async Task<IndexView> ReadRemoteIndex(string owner, string repo)
         {
-            return YamlSerializer.Deserialize<IndexView>(owner, repo, "premakeIndex.yml");
+            return await YamlSerializer.Deserialize<IndexView>(owner, repo, "premakeIndex.yml");
         }
         public static IndexView ReadRemoteLocalIndex(string owner, string repo)
         {

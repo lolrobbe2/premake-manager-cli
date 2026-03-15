@@ -1,20 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 
 namespace src.dependencies.types
 {
+    [DebuggerDisplay("{name} -> {version}")]
     [YamlSerializable]
     internal class LibraryDependency
     {
         [YamlMember]
-        public string name { get; set; } // format: <owner>/<repo_name>
+        public string name { get; set; } = ""; // format: <owner>/<repo_name>
 
         [YamlMember]
-        public string version { get; set; } // format: "*", "=x.y.z", ">x.y.z", "<x.y.z", ">=x.y.z", "<=x.y.z", "@ => parent version"
+        public string version { get; set; } = "";// format: "*", "=x.y.z", ">x.y.z", "<x.y.z", ">=x.y.z", "<=x.y.z", "@ => parent version"
 
         public bool IsValid() => LibraryDependencyValidator.ValidateLibrary(name, version);
+
+        public override bool Equals(object? obj)
+        {
+            //same name -> same key
+            if (obj is LibraryDependency other)
+            {
+                return string.Equals(name, other.name, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            // Use the same property here as in Equals
+            return name?.GetHashCode(StringComparison.OrdinalIgnoreCase) ?? 0;
+        }
     }
 
     internal static class LibraryDependencyValidator

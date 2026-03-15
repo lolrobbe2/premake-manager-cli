@@ -1,4 +1,6 @@
 ﻿using src.config;
+using src.dependencies;
+using src.dependencies.types;
 using src.utils;
 using System;
 using System.Collections.Generic;
@@ -179,6 +181,24 @@ namespace src.common_index
             {
                 if (await CommonIndex.ExtractLibraryFile(remote.Index, repo)) return;
             }
+        }
+
+        /// <summary>
+        /// This function attempts to resolve the dependencies from the localy installed remotes
+        /// </summary>
+        /// <param name="repo"></param>
+        /// <returns></returns>
+        public static Dependencies? GetDependencies(GithubRepo repo)
+        {
+            foreach (RemoteIndex remote in GetEnabledRemoteIndices())
+            {
+                MemoryStream? dependenciesStream = CommonIndex.ReadLibraryDependencies(remote.Index, repo);
+                if(dependenciesStream is not null)
+                {
+                    return YamlSerializer.Deserialize<Dependencies>(dependenciesStream);
+                }
+            }
+            return null;
         }
     }
 }

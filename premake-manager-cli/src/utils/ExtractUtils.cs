@@ -138,32 +138,29 @@ namespace src.utils
                         commonPrefix = firstPrefix + "/";
                     }
                 }
-                await Task.Run(() =>
+
+
+                foreach (var entry in archive.Entries)
                 {
-                    Parallel.ForEach(archive.Entries, entry =>
-                    {
-                        if (string.IsNullOrEmpty(entry.Name))
-                            return;
+                    if (string.IsNullOrEmpty(entry.Name))
+                        return;
 
-                        string relativePath = commonPrefix != null && entry.FullName.StartsWith(commonPrefix)
-                          ? entry.FullName.Substring(commonPrefix.Length)
-                          : entry.FullName;
+                    string relativePath = commonPrefix != null && entry.FullName.StartsWith(commonPrefix)
+                      ? entry.FullName.Substring(commonPrefix.Length)
+                      : entry.FullName;
 
-                        string destinationPath = Path.Combine(destinationExtractDirectory, relativePath);
-                        string? destinationDir = Path.GetDirectoryName(destinationPath);
+                    string destinationPath = Path.Combine(destinationExtractDirectory, relativePath);
+                    string? destinationDir = Path.GetDirectoryName(destinationPath);
 
-                        if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
-                            Directory.CreateDirectory(destinationDir);
+                    if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
+                        Directory.CreateDirectory(destinationDir);
 
-                        entry.ExtractToFile(destinationPath, overwrite: true);
+                    entry.ExtractToFile(destinationPath, overwrite: true);
 
-                        lock (progressLock)
-                        {
-                            extractTask.Value += entry.Length;
-                        }
-                    });
- 
-                });
+
+                    extractTask.Value += entry.Length;
+
+                }
             }
             extractTask.StopTask();
             

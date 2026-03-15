@@ -26,13 +26,11 @@ namespace src.modules
 
         public string version { get; set; } = "*";
 
-        public string entryPoint { get; set; }
+        public string entryPoint { get; set; } = "premake5.lua";
 
-        [YamlIgnore]
         public string? module { get; set; } = "";
         public PremakeModule()
         {
-
         }
         public PremakeModule(string version, string module)
         {

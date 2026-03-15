@@ -17,6 +17,9 @@ using YamlDotNet.Serialization;
 
 namespace src.config
 {
+    /**
+     * this commands intializes the workspace and fetches the libraries and modules
+     */
     internal class ConfigCommand : AsyncCommand
     {
         public async override Task<int> ExecuteAsync(CommandContext context)
@@ -25,14 +28,21 @@ namespace src.config
 
             //TODO should we auto install the correct version of premake?
             await VersionManager.SetVersion(config.Version);
-            if(config.Modules != null)
+            if (config.Modules != null)
+            {
+                AnsiConsole.WriteLine("aquiring graph");
                 await ModuleManager.InstallModules(config.Modules.Values.ToList());
+            }
             //TODO dependencies
             if(config.Libraries != null)
             {
-                DependencyGraph graph = DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
+                AnsiConsole.WriteLine("aquiring graph");
+                DependencyGraph graph = await DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
                 var libs = await DependenciesManager.GetVersionsFromGraph(graph);
-
+                foreach (var lib in libs)
+                {
+                    Console.WriteLine($"lib:{lib.version}, {lib.getLink()}");
+                }
                 await LibraryManager.InstallLibraries(libs.ToList());
             }
             return 0;
@@ -86,11 +96,11 @@ namespace src.config
         {
             Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
 
-            var mainTable = new Table()
+            var modulesTable = new Table()
              .AddColumn("Owner")
              .AddColumn("Modules");
-            mainTable.Border = TableBorder.Rounded;
-            mainTable.ShowRowSeparators = true;
+            modulesTable.Border = TableBorder.Rounded;
+            modulesTable.ShowRowSeparators = true;
 
             if (config.Modules != null)
             {
@@ -117,10 +127,46 @@ namespace src.config
 
 
                     // Add a row in the main table for the owner, with the subtable as its content
-                    mainTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
+                    modulesTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
                 }
-                AnsiConsole.Write(mainTable);  // Render the main table with the owner row
-               
+                AnsiConsole.Write(modulesTable);  // Render the main table with the owner row
+
+            }
+
+            var librariesTable = new Table()
+              .AddColumn("Owner")
+              .AddColumn("Libraries");
+            librariesTable.Border = TableBorder.Rounded;
+            librariesTable.ShowRowSeparators = true;
+            if (config.Libraries != null)
+            {
+                var groupedLibraries = config.Libraries
+                    .GroupBy(m => m.Value.owner)
+                    .OrderBy(g => g.Key);
+
+                foreach (var group in groupedLibraries)
+                {
+
+                    // Create the subtable for the current owner
+                    var subTable = new Table()
+                        .AddColumn("Repo")
+                        .AddColumn("Version");
+                    subTable.Border = TableBorder.Rounded;
+                    subTable.ShowRowSeparators = true;
+                    // Add rows to the subtable for each module of the owner$
+
+
+                    foreach (var library in group)
+                    {
+                        subTable.AddRow($"[link=https://github.com/{group.Key}/{library.Value.repo}] {library.Value.repo}[/]", library.Value.version);
+                    }
+
+
+                    // Add a row in the main table for the owner, with the subtable as its content
+                    librariesTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
+                }
+                AnsiConsole.Write(librariesTable);  // Render the main table with the owner row
+
             }
             return 0;
         }
