@@ -1,4 +1,5 @@
-﻿using src.dependencies.graph;
+﻿using src.dependencies;
+using src.dependencies.graph;
 using src.dependencies.types;
 using src.selfTest;
 using System;
@@ -91,7 +92,7 @@ internal class DependencyGraphTests : ITestClass
             var libraries = new[] { libA1, libA2, libB1, libB2 };
             var graph = new DependencyGraph(libraries);
 
-            var resolved = graph.GetResolvedLibraries(); // function skips conflicts
+            var (resolved,conflict) = graph.GetResolvedLibraries(); // function skips conflicts
 
             // Check that lib/A is included
             if (!resolved.Any(l => l.name == "lib/A"))
@@ -105,5 +106,37 @@ internal class DependencyGraphTests : ITestClass
         }
         );
 
+        yield return ("Versions should be resolved correctly", async () =>
+        {
+            // Library A: no conflict
+            var libA1 = new LibraryDependency { name = "KhronosGroup/Vulkan-ValidationLayers", version = ">=1.4.330" };
+            var libA2 = new LibraryDependency { name = "KhronosGroup/Vulkan-ValidationLayers", version = "<1.4.332" };
+
+            var libraries = new[] { libA1, libA2 };
+            var graph = new DependencyGraph(libraries);
+
+            var result = await DependenciesManager.GetVersionsFromGraph(graph);
+            await Task.CompletedTask;
+
+        }
+        );
+        // Test 2: Adding dependencies
+        yield return ("Add Dependencies with @version should get parent range", async () =>
+        {
+            var libA = new LibraryDependency { name = "glfw/glfw", version = ">=3.3.0" };
+            var libB = new LibraryDependency { name = "vulkan/vulkan", version = "@" };
+            var libC = new LibraryDependency { name = "ocornut/imgui", version = "=1.90.0" };
+
+            var graph = new DependencyGraph(new[] { libA, libB, libC });
+            graph.AddDependency(libC, libA);
+            graph.AddDependency(libC, libB);
+
+            var deps = graph.GetDependencies(libC);
+            if (deps.ElementAt(1).version != "=1.90.0")
+                throw new Exception("when dependency version is @ it should be repalced by its parent version");
+
+            await Task.CompletedTask;
+        }
+        );
     }
 }

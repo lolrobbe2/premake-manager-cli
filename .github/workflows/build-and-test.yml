@@ -43,22 +43,33 @@ jobs:
     - name: Publish
       shell: bash
       run: |
+        PUBLISH_DIR="${{ github.workspace }}/publish-artifacts"
+
         if [ "${{ runner.os }}" == "Windows" ]; then
-            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON
+            dotnet publish "${{ github.workspace }}" -r win-x64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR" 
         elif [ "${{ runner.os }}" == "Linux" ]; then
-            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON
+            dotnet publish ${{ github.workspace }} -r linux-x64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR"
         elif [ "${{ runner.os }}" == "macOS" ]; then
-            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON
+            dotnet publish ${{ github.workspace }} -r osx-arm64 -p:PlatformTarget=arm64 $DOTNET_PUBLISH_COMMON -o "$PUBLISH_DIR"
         fi
     - name: Run Self-Tests
       shell: bash
       run: |
+        EXE_PATH="${{ github.workspace }}/publish-artifacts/premake-manager-cli"
+        
         if [ "${{ runner.os }}" == "Windows" ]; then
-            "${{ github.workspace }}/bin/Release/net9.0/win-x64/publish/premake-manager-cli.exe" test all
-        elif [ "${{ runner.os }}" == "Linux" ]; then
-            ${{ github.workspace }}/bin/Release/net9.0/linux-x64/publish/premake-manager-cli test all
-        elif [ "${{ runner.os }}" == "macOS" ]; then
-            ${{ github.workspace }}/bin/Release/net9.0/osx-arm64/publish/premake-manager-cli test all
+            "$EXE_PATH.exe" test all
+        else
+            chmod +x "$EXE_PATH"
+            "$EXE_PATH" test all
         fi
-
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        # Use the matrix OS to create unique names like: build-windows-latest
+        name: build-${{ matrix.os }}
+        # Point to the same directory used in the Publish step
+        path: ${{ github.workspace }}/publish-artifacts/
+        # Optional: How long to keep the artifact (default 90 days)
+        retention-days: 10
 

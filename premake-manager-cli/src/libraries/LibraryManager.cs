@@ -1,5 +1,7 @@
 ﻿using Octokit;
+using Semver;
 using Spectre.Console;
+using src.common_index;
 using src.config;
 using src.modules;
 using src.utils;
@@ -8,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,16 +22,22 @@ namespace src.libraries
         public static async Task<LibraryConfig> GetLibraryConfig(string githubLink)
         {
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
+            return await GetLibraryConfig(repo);
+        }
+        public static async Task<LibraryConfig> GetLibraryConfig(GithubRepo repo)
+        {
             try
             {
                 Octokit.RepositoryContent config = (await Github.Repositories.Content.GetAllContentsByRef(repo.owner, repo.name, "premakeLibrary.yml", "main"))[0];
                 await DownloadUtils.DownloadStatus(config.DownloadUrl, $"Fetching library info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
                 return new LibraryConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeLibrary.yml"));
-            } catch (Octokit.NotFoundException) {
-                return new LibraryConfig() { name = repo.name, entryPoint = "premake5.lua", description = Github.GetDescription(repo) };
+            }
+            catch (Octokit.NotFoundException)
+            {
+                //default for when we are installing from a remote with no LibraryConfig
+                return new LibraryConfig() { name = repo.name, entryPoint = "premake5.lua", description = await Github.GetDescription(repo) };
             }
         }
-
         public static async Task GetLibrariesConfig(string[] githubLinks)
         {
             IList<Task<LibraryConfig>> tasks = new List<Task<LibraryConfig>>();
@@ -80,7 +89,7 @@ namespace src.libraries
         [RequiresUnreferencedCode("Calls src.config.ConfigReader.ConfigReader(String)")]
         public static async Task InstallLibraryCtx(ProgressContext ctx, string githubLink, string version = "*")
         {
-            ConfigReader reader = new ConfigReader("");
+
             if (!githubLink.StartsWith("https://github.com/"))
             {
                 string[] repoInfo = githubLink.Split('/');
@@ -90,14 +99,17 @@ namespace src.libraries
 
             if (string.IsNullOrEmpty(version))
                 version = "*";
-            LibraryConfig config = await GetLibraryConfig(githubLink);
+            LibraryConfig libconfig = await GetLibraryConfig(githubLink);
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);
-            await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {config.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
-            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"{reader.librariesPath}/{repo.name}", $"extracting {config.name}");
+            await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {libconfig.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), await GetLibraryPath(repo), $"extracting {libconfig.name}");
+            await RemotesManager.InstallRemotesLibrary(repo);
+            
         }
 
+        [RequiresUnreferencedCode("Calls src.libraries.LibraryManager.InstallLibraryCtx(ProgressContext, String, String)")]
         public static async Task InstallLibrariesCtx(ProgressContext ctx, List<(string githubLink, string version)> modules)
         {
             foreach (var (githubLink, version) in modules)
@@ -110,34 +122,55 @@ namespace src.libraries
         {
             GitHubClient client = new GitHubClient(new ProductHeaderValue("premake-manager"));
 
+            if (SemVersion.TryParse(version, SemVersionStyles.Any, out _))
+            {
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "premake-manager");
+                // 1. Try the version exactly as provided
+                string firstUrl = Github.FormatZipballUrl(repo, version);
+                var firstResponse = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, firstUrl));
+
+                if (firstResponse.IsSuccessStatusCode)
+                   return firstUrl;
+                
+
+                // 2. If first fails, toggle the 'v' prefix and try again
+                string toggledVersion = version.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                    ? version.Substring(1)
+                    : $"v{version}";
+
+                string secondUrl = Github.FormatZipballUrl(repo, toggledVersion);
+                var secondResponse = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, secondUrl));
+
+                if (secondResponse.IsSuccessStatusCode)
+                    return secondUrl;
+            }
             if (version == "*" || string.IsNullOrWhiteSpace(version))
             {
-                Repository repoInfo = await client.Repository.Get(repo.owner, repo.name);
+                Repository repoInfo = await Github.GetRepo(repo);
                 return Github.FormatZipballUrl(repo, repoInfo.DefaultBranch);
             }
-
             // Check if it's a branch
-            IReadOnlyList<Branch> branches = await client.Repository.Branch.GetAll(repo.owner, repo.name);
+            IReadOnlyList<Branch> branches = await Github.GetBranches(repo);
             Branch? branch = branches.FirstOrDefault(b => b.Name == version);
             if (branch != null)
                 return Github.FormatZipballUrl(repo, branch.Name);
 
 
-            /* Check if it's a tag */
-            IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(repo.owner, repo.name);
-            Release? tagRelease = releases.FirstOrDefault(r => r.TagName == version);
-            if (tagRelease != null)
-                return tagRelease.ZipballUrl;
-
-
             /* Assume it's a commit SHA (Octokit throws on invalid SHA so we fetch all commits and match manually) */
-            IReadOnlyList<GitHubCommit> commits = await client.Repository.Commit.GetAll(repo.owner, repo.name);
+            IReadOnlyList<GitHubCommit> commits = await Github.GetRepoCommits(repo);
             bool commitExists = commits.Any(c => c.Sha.StartsWith(version));
             if (commitExists)
                 return Github.FormatZipballUrl(repo, version);
 
 
             throw new InvalidOperationException($"Could not resolve tag, branch, or commit '{version}' for repository {repo.owner}/{repo.name}.");
+        }
+
+        public static async Task<string> GetLibraryPath(GithubRepo library)
+        {
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+            return $"{config.LibrariesPath ?? "libraries"}/{library.name}";
         }
     }
 }

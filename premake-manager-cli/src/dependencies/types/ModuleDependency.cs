@@ -11,8 +11,8 @@ namespace src.dependencies.types
     internal class ModuleDependency
     {
         [YamlMember]
-        public string name { get; set; }
+        public string name { get; set; } = "";
         [YamlMember]
-        public string version { get; set; }
+        public string version { get; set; } = "";
     }
 }

@@ -1,7 +1,11 @@
 ﻿using Octokit;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using src.dependencies;
+using src.dependencies.graph;
+using src.libraries;
 using src.modules;
+using src.utils;
 using src.version;
 using System;
 using System.Collections.Generic;
@@ -14,14 +18,38 @@ using YamlDotNet.Serialization;
 
 namespace src.config
 {
+    /**
+     * this commands intializes the workspace and fetches the libraries and modules
+     */
     internal class ConfigCommand : AsyncCommand
     {
         public async override Task<int> ExecuteAsync(CommandContext context)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
+            PremakeLibrary[] libraries = [];
+            PremakeModule[] modules = [];
+
             //TODO should we auto install the correct version of premake?
-            await VersionManager.SetVersion(config.version);
-            await ModuleManager.InstallModules(config.modules.Values.ToList());
+            await VersionManager.SetVersion(config.Version);
+            if (config.Modules != null)
+            {
+                AnsiConsole.WriteLine("aquiring graph");
+                modules = config.Modules.Values.ToArray();
+                await ModuleManager.InstallModules(config.Modules.Values.ToList());
+            }
+            //TODO dependencies
+            if(config.Libraries != null)
+            {
+                AnsiConsole.WriteLine("aquiring graph");
+                DependencyGraph graph = await DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
+                var libs = (await DependenciesManager.GetVersionsFromGraph(graph)).Distinct()
+                    .ToList();
+
+                libraries = libs.ToArray();
+                await LibraryManager.InstallLibraries(libs.ToList());
+            }
+            PremakeSystemWriter.Write(config, libraries, modules);
             return 0;
         }
     }
@@ -32,15 +60,15 @@ namespace src.config
         {
             [CommandArgument(0, "[VERSION]")]
             [Description("version to install")]
-            public required string name { get; set; }
+            public required string version { get; set; }
         }
         public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
         {
-            await VersionManager.SetVersion(settings.name);
-            ConfigReader reader = new ConfigReader();
-            ConfigWriter writer = ConfigWriter.FromReader(reader);
-            writer.SetVersion(settings.name);
-            await writer.Write();
+            await VersionManager.SetVersion(settings.version);
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
+
+            config.Version = settings.version;
+            ConfigManager.WriteConfig(config,null);
             return 0;
         }
 
@@ -48,7 +76,7 @@ namespace src.config
         {
             IReadOnlyList<Release> releases = VersionManager.GetVersions().ConfigureAwait(true).GetAwaiter().GetResult();
             Release? release = null;
-            if (settings.name == null)
+            if (settings.version == null)
             {
 
                 string selectedTag = AnsiConsole.Prompt(
@@ -58,11 +86,11 @@ namespace src.config
                        .AddChoices(releases.Select(r => r.TagName))
                 );
 
-                settings.name = selectedTag;
+                settings.version = selectedTag;
             }
-            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.name));
+            release = releases.FirstOrDefault(release => release.TagName.Equals(settings.version));
             if (release == null)
-                return ValidationResult.Error($"Release with tag '{settings.name}' was not found. Please provide a valid release tag.");
+                return ValidationResult.Error($"Release with tag '{settings.version}' was not found. Please provide a valid release tag.");
             return ValidationResult.Success();
         }
     }
@@ -71,40 +99,80 @@ namespace src.config
     {
         public async override Task<int> ExecuteAsync(CommandContext context)
         {
-            ConfigReader config = new ConfigReader();
+            Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
 
-            var mainTable = new Table()
+            var modulesTable = new Table()
              .AddColumn("Owner")
              .AddColumn("Modules");
-            mainTable.Border = TableBorder.Rounded;
-            mainTable.ShowRowSeparators = true;
+            modulesTable.Border = TableBorder.Rounded;
+            modulesTable.ShowRowSeparators = true;
 
-            var groupedModules = config.modules
-                .GroupBy(m => m.Value.owner)
-                .OrderBy(g => g.Key);
-
-            foreach (var group in groupedModules)
+            if (config.Modules != null)
             {
+                var groupedModules = config.Modules
+                    .GroupBy(m => m.Value.owner)
+                    .OrderBy(g => g.Key);
 
-                // Create the subtable for the current owner
-                var subTable = new Table()
-                    .AddColumn("Repo")
-                    .AddColumn("Version");
-                subTable.Border = TableBorder.Rounded;
-                subTable.ShowRowSeparators = true;
-                // Add rows to the subtable for each module of the owner$
-
-
-                foreach (var module in group)
+                foreach (var group in groupedModules)
                 {
-                    subTable.AddRow($"[link=https://github.com/{group.Key}/{module.Value.repo}] {module.Value.repo}[/]", module.Value.version);
-                }
-                                    
 
-                // Add a row in the main table for the owner, with the subtable as its content
-                mainTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"),subTable);
+                    // Create the subtable for the current owner
+                    var subTable = new Table()
+                        .AddColumn("Repo")
+                        .AddColumn("Version");
+                    subTable.Border = TableBorder.Rounded;
+                    subTable.ShowRowSeparators = true;
+                    // Add rows to the subtable for each module of the owner$
+
+
+                    foreach (var module in group)
+                    {
+                        subTable.AddRow($"[link=https://github.com/{group.Key}/{module.Value.repo}] {module.Value.repo}[/]", module.Value.version);
+                    }
+
+
+                    // Add a row in the main table for the owner, with the subtable as its content
+                    modulesTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
+                }
+                AnsiConsole.Write(modulesTable);  // Render the main table with the owner row
+
             }
-            AnsiConsole.Write(mainTable);  // Render the main table with the owner row
+
+            var librariesTable = new Table()
+              .AddColumn("Owner")
+              .AddColumn("Libraries");
+            librariesTable.Border = TableBorder.Rounded;
+            librariesTable.ShowRowSeparators = true;
+            if (config.Libraries != null)
+            {
+                var groupedLibraries = config.Libraries
+                    .GroupBy(m => m.Value.owner)
+                    .OrderBy(g => g.Key);
+
+                foreach (var group in groupedLibraries)
+                {
+
+                    // Create the subtable for the current owner
+                    var subTable = new Table()
+                        .AddColumn("Repo")
+                        .AddColumn("Version");
+                    subTable.Border = TableBorder.Rounded;
+                    subTable.ShowRowSeparators = true;
+                    // Add rows to the subtable for each module of the owner$
+
+
+                    foreach (var library in group)
+                    {
+                        subTable.AddRow($"[link=https://github.com/{group.Key}/{library.Value.repo}] {library.Value.repo}[/]", library.Value.version);
+                    }
+
+
+                    // Add a row in the main table for the owner, with the subtable as its content
+                    librariesTable.AddRow(new Markup($"[bold green][link=https://github.com/{group.Key}] {group.Key}[/][/]"), subTable);
+                }
+                AnsiConsole.Write(librariesTable);  // Render the main table with the owner row
+
+            }
             return 0;
         }
     }

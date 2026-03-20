@@ -15,14 +15,29 @@ namespace src
     {
         static async Task Main(string[] args)
         {
+            string sessionToken = "";
 #if DEBUG
             bool interactive = true;
 #else
             bool interactive = false;
 #endif
-            if (args.Length > 0 && args[0] == "--interactive")
-                interactive = true;
+            foreach (var arg in args)
+            {
+                if (arg == "--interactive")
+                {
+                    interactive = true;
+                }
+                if (arg.StartsWith("--session="))
+                {
+                    // Extracts the part after "--session="
+                    sessionToken = arg.Substring("--session=".Length).Trim('"');
+                    await Github.SetSession(sessionToken);
 
+                }
+
+            }
+           
+            
             Console.CancelKeyPress += (sender, e) =>
             {
                 PathUtils.ClearDirectory(PathUtils.GetTempPath());
@@ -84,6 +99,21 @@ namespace src
                     branch.AddCommand<modules.ModuleRemoveCommand>("remove");
                 });
 
+                config.AddBranch("library", branch =>
+                {
+                    branch.SetDescription("Manage premake libraries");
+                    branch.AddCommand<libraries.LibraryInfoCommand>("info")
+                          .WithDescription("get the info from a library");
+
+                    branch.AddCommand<libraries.LibraryInstallCommand>("install")
+                          .WithDescription("install a library given its github link");
+
+                    branch.AddCommand<libraries.LibraryAddCommand>("add")
+                          .WithDescription("add a library to the confiuration");
+
+                    branch.AddCommand<libraries.LibraryRemoveCommand>("remove");
+                });
+
                 config.AddBranch("test", branch =>
                 {
                     branch.SetDescription("The Premake Manager selftest commands");
@@ -91,6 +121,35 @@ namespace src
                         .WithDescription("run all the registered self tests");
 
                     branch.AddCommand<selfTest.SelfTestGroupCommand>("group").WithDescription("run all the test in a certain group");
+                });
+                config.AddBranch("index", branch => {
+                    branch.SetDescription("All commands for managing the common index");
+                    branch.AddCommand<common_index.CommonIndexCommand>("new");
+
+                    branch.AddBranch("add", branch => {
+                        branch.AddCommand<common_index.CommonAddLibCommand>("library").WithDescription("Add a library to the local index");
+                        branch.AddBranch("uri", uriBranch =>
+                        {
+                            uriBranch.AddCommand<common_index.CommonAddUriLibCommand>("library").WithDescription("Add a library from a github uri to the local index");
+                            
+                        });
+                        branch.AddCommand<common_index.CommonAddDependencyCommand>("dependency").WithDescription("Add a dependency to a local index library");
+
+                    });
+                });
+                config.AddBranch("remotes", branch => {
+                    branch.SetDescription("All commands for managing the localy used remotes");
+                    branch.AddCommand<common_index.RemotesViewCommand>("view")
+                          .WithDescription("Show all the local remotes");
+                    branch.AddCommand<common_index.RemotesAddCommand>("add")
+                          .WithDescription("Add a new local remote");
+                    branch.AddCommand<common_index.RemotesUpdateCommand>("update")
+                        .WithDescription("Update outdated remotes");
+                    branch.AddCommand<common_index.RemotesRemoveCommand>("remove")
+                      .WithDescription("Remove a remote");
+                    branch.AddCommand<common_index.RemotesResetCommand>("reset")
+                       .WithDescription("Reset remotes to default");
+
                 });
             });
 

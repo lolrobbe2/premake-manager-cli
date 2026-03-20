@@ -1,11 +1,16 @@
-﻿using Spectre.Console;
+﻿using Octokit;
+using Semver;
+using Spectre.Console;
 using src.dependencies.types;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace src.dependencies.graph
 {
+    [DebuggerDisplay("Count = {_graph.Count} (Libraries)")]
+    [DebuggerTypeProxy(typeof(DependencyGraphDebugProxy))]
     internal class DependencyGraph
     {
         private readonly Dictionary<LibraryDependency, HashSet<LibraryDependency>> _graph
@@ -29,7 +34,18 @@ namespace src.dependencies.graph
             if (!_graph.ContainsKey(dependsOn))
                 _graph[dependsOn] = new HashSet<LibraryDependency>();
 
+            if (dependsOn.version == "@")
+                dependsOn.version = library.version;
+
             _graph[library].Add(dependsOn);
+        }
+
+        public void AddDependencies(LibraryDependency library, IEnumerable<LibraryDependency> dependencies)
+        {
+            foreach (var dependency in dependencies)
+            {
+                AddDependency(library, dependency);
+            }
         }
 
         public IReadOnlyCollection<LibraryDependency> GetDependencies(LibraryDependency library) =>
@@ -37,84 +53,113 @@ namespace src.dependencies.graph
 
         public IReadOnlyCollection<LibraryDependency> GetAllLibraries() => _graph.Keys;
 
-        public IReadOnlyDictionary<string, List<LibraryDependency>> GetDependencyConflicts(bool showProgress = false)
+        public IReadOnlyDictionary<string, LibraryDependency> GetDependencyConflicts(bool showProgress = false)
         {
             // Include all libraries: keys + dependencies
-            var allDeps = _graph.Keys
-                .Concat(_graph.SelectMany(kv => kv.Value))
-                .ToList();
+            var (resolved, conflict) = GetResolvedLibraries();
 
-            var conflicts = new Dictionary<string, List<LibraryDependency>>();
-
-            if (showProgress)
-            {
-                AnsiConsole.Progress()
-                    .AutoClear(false)
-                    .Start(ctx =>
-                    {
-                        var task = ctx.AddTask("Checking dependencies...", maxValue: allDeps.Count);
-
-                        foreach (var group in allDeps.GroupBy(lib => lib.name))
-                        {
-                            var versions = group.Select(lib => lib.VersionRange).Distinct().ToList();
-                            if (versions.Count > 1 && VersionRange.ConflictsWithAll(versions))
-                                conflicts[group.Key] = group.ToList();
-
-                            task.Increment(1);
-                        }
-                    });
-            }
-            else
-            {
-                foreach (var group in allDeps.GroupBy(lib => lib.name))
-                {
-                    var versions = group.Select(lib => lib.VersionRange).Distinct().ToList();
-                    if (versions.Count > 1 && VersionRange.ConflictsWithAll(versions))
-                        conflicts[group.Key] = group.ToList();
-                }
-            }
-
-            return conflicts;
+            return conflict!;
         }
 
-        /// <summary>
-        /// Returns a flat list of all libraries with the best matching version,
-        /// resolving any compatible version ranges. Throws if no compatible version exists.
-        /// </summary>
-        public IReadOnlyCollection<LibraryDependency> GetResolvedLibraries()
+
+        public (IReadOnlyCollection<LibraryDependency>, IReadOnlyDictionary<string, LibraryDependency>) GetResolvedLibraries()
         {
             // Include all libraries
             var allDeps = _graph.Keys.Concat(_graph.SelectMany(kv => kv.Value)).ToList();
 
+            //contains all resolved non conflicting libraries.
             var resolved = new List<LibraryDependency>();
+            //contains all conflicting libraries.
+            var conflict = new Dictionary<string, LibraryDependency>();
 
-            // Group by library name
-            var groups = allDeps.GroupBy(lib => lib.name);
-            foreach (var group in groups)
+            AnsiConsole.Progress()
+                    .AutoClear(false)
+                    .Start(ctx =>
+                    {
+                        // Group by library name
+                        var task = ctx.AddTask("Checking dependencies...", maxValue: allDeps.Count);
+
+                        var groups = allDeps.GroupBy(lib => lib.name);
+                        foreach (var group in groups)
+                        {
+                            SemVersionRange final = SemVersionRange.Empty;
+                            SemVersionRange[] ranges = group.Select(lib => SemVersionRange.Parse(lib.version)).ToArray();
+                            foreach (SemVersionRange range in ranges)
+                            {
+                                if (final != SemVersionRange.Empty)
+                                    final = SemVersionRange.Parse($"{final} {range}");
+                                else
+                                    final = SemVersionRange.Parse($"{range}");
+
+                                if (final == SemVersionRange.Empty)
+                                {
+
+                                    conflict.Add(group.Key, new LibraryDependency()
+                                    {
+                                        name = group.Key,
+                                        version = range.ToString()
+                                    });
+                                    break;
+                                }
+
+
+                            }
+                            if (final == SemVersionRange.Empty)
+                                continue;
+                            if (resolved.Find(dep => dep.name == group.Key) is not null)
+                            {
+                                conflict.Add(group.Key, new LibraryDependency()
+                                {
+                                    name = group.Key,
+                                    version = final.ToString()
+                                });
+                            }
+                            else
+                            {
+                                resolved.Add(new LibraryDependency()
+                                {
+                                    name = group.Key,
+                                    version = final.ToString()
+                                });
+                            }
+                            task.Increment(1);
+                            ctx.Refresh();
+                        }
+
+
+                    });
+
+            return (resolved, conflict);
+        }
+
+        internal class DependencyGraphDebugProxy
+        {
+            private readonly DependencyGraph _graphObj;
+
+            public DependencyGraphDebugProxy(DependencyGraph graphObj)
             {
-                var ranges = group.Select(lib => lib.VersionRange).ToList();
-
-                // Check for conflicts
-                if (VersionRange.ConflictsWithAll(ranges))
-                    continue; //skip the conflicts
-
-                // Pick the "best" version: choose the highest lower bound
-                long bestVersion = ranges
-                    .Where(r => !r.AnyVersion)
-                    .Max(r => r.LowerBound ?? 0);
-
-                // If all are *, just pick *
-                var finalRange = ranges.FirstOrDefault(r => r.AnyVersion)
-                                 ?? new VersionRange(bestVersion.ToString());
-
-                resolved.Add(new LibraryDependency
-                {
-                    name = group.Key,
-                    version = finalRange.ToString()
-                });
+                _graphObj = graphObj;
             }
 
-            return resolved;
+            // This shows up as a "Libraries" node you can expand
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public DependencyEntry[] Libraries => _graphObj.GetAllLibraries()
+                .Select(lib => new DependencyEntry(lib, _graphObj.GetDependencies(lib)))
+                .ToArray();
+        }
+
+        // A helper class just for the debugger view
+        [DebuggerDisplay("{Library.name,nq} -> {Dependencies.Count} deps")]
+        internal class DependencyEntry
+        {
+            public LibraryDependency Library { get; }
+            public IReadOnlyCollection<LibraryDependency> Dependencies { get; }
+
+            public DependencyEntry(LibraryDependency lib, IReadOnlyCollection<LibraryDependency> deps)
+            {
+                Library = lib;
+                Dependencies = deps;
+            }
         }
     }
 }

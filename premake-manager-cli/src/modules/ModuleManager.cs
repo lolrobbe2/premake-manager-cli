@@ -1,4 +1,5 @@
 ﻿using Octokit;
+using Semver;
 using Spectre.Console;
 using src.utils;
 using System;
@@ -17,8 +18,15 @@ namespace src.modules
         public static async Task<ModuleConfig> GetModuleConfig(string githubLink)
         {
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
-            Octokit.RepositoryContent config = (await Github.Repositories.Content.GetAllContentsByRef(repo.owner, repo.name, "premakeModule.yml", "main"))[0];
+            RepositoryContent config = await Github.GetAllContentsByRef(repo,"premakeModule.yml", "main");
             await DownloadUtils.DownloadStatus(config.DownloadUrl, $"Fetching module info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
+            return new ModuleConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
+        }
+        public static async Task<ModuleConfig> GetModuleConfigCtx(ProgressContext ctx,string githubLink)
+        {
+            GithubRepo repo = Github.GetRepoFromLink(githubLink);
+            RepositoryContent config = await Github.GetAllContentsByRef(repo, "premakeModule.yml", "main");
+            await DownloadUtils.DownloadProgressCtx(ctx,config.DownloadUrl, $"Fetching module info: {repo.name}", Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
             return new ModuleConfig(Path.Combine(PathUtils.GetTempModulePath(repo.name), "premakeModule.yml"));
         }
 
@@ -80,12 +88,12 @@ namespace src.modules
 
             if (string.IsNullOrEmpty(version))
                 version = "*";
-            ModuleConfig config = await GetModuleConfig(githubLink);
+            ModuleConfig config = await GetModuleConfigCtx(ctx,githubLink);
             GithubRepo repo = Github.GetRepoFromLink(githubLink);
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);
             await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {config.name} module", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
-            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), $"modules/{repo.name}", $"extracting {config.name}");
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), Path.Combine(Directory.GetCurrentDirectory(),$"modules/{repo.name}"), $"extracting {config.name}");
         }
 
         public static async Task InstallModulesCtx(ProgressContext ctx, List<(string githubLink, string version)> modules)
@@ -98,30 +106,25 @@ namespace src.modules
 
         private static async Task<string> ResolveDownloadUrl(GithubRepo repo, string version)
         {
-            GitHubClient client = new GitHubClient(new ProductHeaderValue("YourAppName"));
 
+            if (SemVersion.TryParse(version, SemVersionStyles.Any, out _))
+            {
+                return Github.FormatZipballUrl(repo, version);
+            }
             if (version == "*" || string.IsNullOrWhiteSpace(version))
             {
-                Repository repoInfo = await client.Repository.Get(repo.owner, repo.name);
+                Repository repoInfo = await Github.GetRepo(repo);
                 return Github.FormatZipballUrl(repo, repoInfo.DefaultBranch);
             }
 
             // Check if it's a branch
-            IReadOnlyList<Branch> branches = await client.Repository.Branch.GetAll(repo.owner, repo.name);
+            IReadOnlyList<Branch> branches = await Github.GetBranches(repo);
             Branch? branch = branches.FirstOrDefault(b => b.Name == version);
             if (branch != null)
-                return Github.FormatZipballUrl(repo, branch.Name);
-            
-
-            /* Check if it's a tag */
-            IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(repo.owner,repo.name);
-            Release? tagRelease = releases.FirstOrDefault(r => r.TagName == version);
-            if (tagRelease != null)
-                return tagRelease.ZipballUrl;
-            
+                return Github.FormatZipballUrl(repo, branch.Name); 
 
             /* Assume it's a commit SHA (Octokit throws on invalid SHA so we fetch all commits and match manually) */
-            IReadOnlyList<GitHubCommit> commits = await client.Repository.Commit.GetAll(repo.owner,repo.name);
+            IReadOnlyList<GitHubCommit> commits = await Github.GetRepoCommits(repo);
             bool commitExists = commits.Any(c => c.Sha.StartsWith(version));
             if (commitExists)
                 return Github.FormatZipballUrl(repo, version);
