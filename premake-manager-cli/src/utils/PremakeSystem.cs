@@ -1,4 +1,6 @@
 ﻿using src.config;
+using src.libraries;
+using src.modules;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,26 +16,14 @@ namespace src.utils
     internal class PremakeSystemWriter
     {
         static IList<string> content = new List<string>();
-        public static void Write(Config config)
+        public static void Write(Config config, PremakeLibrary[] libraries, PremakeModule[] modules)
         {
+            File.Delete("premake-system.lua");
             AddDisclaimer();
             AddPath(config.ModulesPath,"modules");
             AddPath(config.LibrariesPath,"libraries");
-            if (config.Modules != null)
-            {
-                foreach (var item in config.Modules)
-                {
-                    AddModule(item.Value.entryPoint ?? item.Key);
-                }
-                try
-                {
-                    File.Delete("premake-system.lua");
-                }
-                catch (Exception)
-                {
-
-                }
-            }
+            AddLibs(libraries);
+            AddModules(modules);
             File.WriteAllText("premake-system.lua", string.Join("\n", content));
         }
         static void AddDisclaimer()
@@ -44,9 +34,47 @@ namespace src.utils
         {
             content.Add($"premake.path = premake.path..\";\"..path.join(_MAIN_SCRIPT_DIR, \"{(string.IsNullOrEmpty(path) ? defaultPath : path)}\")");
         }
-        static void AddModule(string entryPoint)
+        static void AddLibs(PremakeLibrary[] libraries)
         {
-            content.Add($"require \"{entryPoint}\"");
+            AddLibsStart();
+            foreach (var lib in libraries)
+            {
+                AddLib(lib);
+            }
+            AddLibsEnd();
+        }
+        static void AddModules(PremakeModule[] modules)
+        {
+            AddModulesStart();
+            foreach (var module in modules)
+            {
+                AddModule(module);
+            }
+            AddModulesEnd();
+        }
+        static void AddLibsStart()
+        {
+            content.Add($"\n---LIBRARIES---\n_G.Libraries =\n{{");
+        }
+        static void AddLib(PremakeLibrary lib)
+        {
+            content.Add($"    [\"{lib.library.Split('/')[1]}\"] = {{ version = \"{lib.version}\" }},");
+        }
+        static void AddLibsEnd()
+        {
+            content.Add($"}}");
+        }
+        static void AddModulesStart()
+        {
+            content.Add($"\n---MODULES---\n_G.Modules =\n{{");
+        }
+        static void AddModule(PremakeModule mod)
+        {
+            content.Add($"    [\"{mod.module}\"] = {{ version = \"{mod.version}\" }},");
+        }
+        static void AddModulesEnd()
+        {
+            content.Add($"}}");
         }
     }
 }

@@ -171,14 +171,63 @@ namespace src.dependencies
         /// <returns></returns>
         public static async Task<DependencyGraph> GetDependencyGraph(IList<PremakeLibrary> libraries)
         {
-            IList<KeyValuePair<PremakeLibrary,LibraryDependency>> rootDependencies = libraries.Select((library) => new KeyValuePair<PremakeLibrary, LibraryDependency>(library ,new LibraryDependency() { name = library.library!, version = library.version })).ToList();
-            DependencyGraph graph = new DependencyGraph(rootDependencies.Select((dep)=> dep.Value).ToArray());
+            IList<KeyValuePair<PremakeLibrary, LibraryDependency>> rootDependencies = libraries.Select((library) => new KeyValuePair<PremakeLibrary, LibraryDependency>(library, new LibraryDependency() { name = library.library!, version = library.version })).ToList();
+            DependencyGraph graph = new DependencyGraph(rootDependencies.Select((dep) => dep.Value).ToArray());
             foreach (KeyValuePair<PremakeLibrary, LibraryDependency> dependency in rootDependencies)
             {
-                graph.AddDependencies(dependency.Value,await GatherDependencies(dependency.Key));   
+                graph.AddDependencies(dependency.Value, await GatherDependencies(dependency.Key));
             }
             return graph;
 
+        }
+        static async Task<PremakeLibrary> GetLibVersions(Regex regex, LibraryDependency library)
+        {
+            GithubRepo repo = Github.GetRepoFromLink(library.name);
+            SemVersionRange range = SemVersionRange.Parse(library.version);
+            try
+            {
+                #region BATCH_CALC_SEMVERS
+                // fetch all tags
+                var versions = await Github.GetRepoTags(repo);
+
+                // parse all valid SemVersions in one pass
+                int batchSize = 50; // Adjust based on your API limits
+                var batches = versions.Chunk(batchSize);
+
+                var tasks = batches.Select(async batch =>
+                {
+                    // Process the batch in parallel or sequentially depending on your needs
+                    return batch.Select(tag =>
+                    {
+                        Match match = regex.Match(tag.Name);
+                        if (match.Success && SemVersion.TryParse(match.Groups[1].Value, out SemVersion tmp))
+                        {
+                            return (Success: true, Version: tmp);
+                        }
+                        return (Success: false, Version: null);
+                    })
+                    .Where(t => t.Success)
+                    .Select(t => t.Version)
+                    .ToList();
+                });
+                #endregion
+                // Wait for all batches to finish
+                var semVersions = (await Task.WhenAll(tasks)).SelectMany(x => x).ToList();
+
+                // find the first version in range
+                SemVersion firstInRange = semVersions.FirstOrDefault(v => range.Contains(v));
+
+                if (firstInRange != null)
+                {
+                    return new PremakeLibrary($"v{firstInRange.ToString()}", library.name);
+                }
+            }
+            catch (Exception)
+            {
+                AnsiConsole.WriteLine($"Library not found");
+            }
+            //NO VERSION FOUND FOR RANGE
+            throw new InvalidOperationException("No valid version found for provided range");
         }
         /// <summary>
         /// This function fetches the versions from Github and resolves the correct version (if possible).
@@ -191,35 +240,10 @@ namespace src.dependencies
             IList<PremakeLibrary> resultLibraries = new List<PremakeLibrary>();
             Regex regex = new Regex(@"(\d+\.\d+\.\d+)", RegexOptions.IgnoreCase);
 
-            foreach (LibraryDependency library in libraries)
-            {
-                GithubRepo repo = Github.GetRepoFromLink(library.name);
-                SemVersionRange range = SemVersionRange.Parse(library.version);
-                try
-                {
-                    var versions = await Github.GetRepoTags(repo);
-                    bool found = false;
-                    //TODO use tryparse to only add valid versions
-                    foreach (RepositoryTag item in versions)
-                    {
-                        Match tagMatch = regex.Match(item.Name);
-                        if (tagMatch.Success && SemVersion.TryParse(tagMatch.Groups[1].Value, out SemVersion? version) && range.Contains(version))
-                        {
-                            resultLibraries.Add(new PremakeLibrary(version.ToString(),library.name));
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found)
-                        continue;
-                }
-                catch (Exception)
-                {
-                    AnsiConsole.WriteLine($"Library not found");
-                }
-                //NO VERSION FOUND FOR RANGE
-                throw new InvalidOperationException("No valid version found for provided range");
-            }
+            var tasks = libraries.Select(library => GetLibVersions(regex, library));
+
+            // 2. Start them all and wait for the whole group to complete
+            resultLibraries = await Task.WhenAll(tasks);
             return resultLibraries.ToArray();
         }
         #endregion

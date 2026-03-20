@@ -1,7 +1,5 @@
 require "vstudio"
 
-
-
 workspace "premake-manager-cli"
 architecture "x86_64"
    configurations { "Debug", "Release" }

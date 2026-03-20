@@ -45,9 +45,10 @@ namespace src.utils
             ProgressTask downloadTask = ctx.AddTask($"[green]{description}[/]");
             downloadTask.StartTask();
 
+
             destinationPath = destinationPath.Replace("\\", "/");
-            string destinationDir = Path.GetDirectoryName(destinationPath)!;
-            if (!Directory.Exists(destinationDir))
+            string destinationDir = Path.GetDirectoryName(destinationPath).Replace("\\", "/")!;
+            if (Directory.Exists(destinationDir) == false)
                 Directory.CreateDirectory(destinationDir);
             else
                 PathUtils.ClearDirectory(destinationDir);
@@ -57,6 +58,12 @@ namespace src.utils
 
             using (HttpResponseMessage response = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
             {
+                if(response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    AnsiConsole.MarkupLine("[red]Github Client rate limit reached[/]");
+                    return;
+                }
+
                 response.EnsureSuccessStatusCode();
 
                 downloadTask.MaxValue = (double)(response.Content.Headers.ContentLength ?? -1);

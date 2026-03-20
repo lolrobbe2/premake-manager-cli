@@ -5,6 +5,7 @@ using src.dependencies;
 using src.dependencies.graph;
 using src.libraries;
 using src.modules;
+using src.utils;
 using src.version;
 using System;
 using System.Collections.Generic;
@@ -26,11 +27,15 @@ namespace src.config
         {
             Config config = ConfigManager.HasConfig() ? ConfigManager.ReadConfig() : new Config();
 
+            PremakeLibrary[] libraries = [];
+            PremakeModule[] modules = [];
+
             //TODO should we auto install the correct version of premake?
             await VersionManager.SetVersion(config.Version);
             if (config.Modules != null)
             {
                 AnsiConsole.WriteLine("aquiring graph");
+                modules = config.Modules.Values.ToArray();
                 await ModuleManager.InstallModules(config.Modules.Values.ToList());
             }
             //TODO dependencies
@@ -38,13 +43,13 @@ namespace src.config
             {
                 AnsiConsole.WriteLine("aquiring graph");
                 DependencyGraph graph = await DependenciesManager.GetDependencyGraph(config.Libraries.Values.ToList());
-                var libs = await DependenciesManager.GetVersionsFromGraph(graph);
-                foreach (var lib in libs)
-                {
-                    Console.WriteLine($"lib:{lib.version}, {lib.getLink()}");
-                }
+                var libs = (await DependenciesManager.GetVersionsFromGraph(graph)).Distinct()
+                    .ToList();
+
+                libraries = libs.ToArray();
                 await LibraryManager.InstallLibraries(libs.ToList());
             }
+            PremakeSystemWriter.Write(config, libraries, modules);
             return 0;
         }
     }

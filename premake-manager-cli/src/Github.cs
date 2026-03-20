@@ -1,9 +1,13 @@
 ﻿using Octokit;
+using Octokit.Caching;
+using Octokit.Internal;
 using Spectre.Console;
+using src.utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,9 +27,18 @@ namespace src
         // Static constructor to initialize the instance
         static Github()
         {
+            var connection = new Connection(
+                new ProductHeaderValue("premake-manager-cli"),
+                GitHubClient.GitHubApiUrl,
+                new InMemoryCredentialStore(new Credentials("token")),
+                new CachingHttpClient(new HttpClientAdapter(() => HttpMessageHandlerFactory.CreateDefault(new WebProxy())), new CacheProvider()),
+                new SimpleJsonSerializer());
+
             GitHubClient client = new GitHubClient(
-                new ProductHeaderValue("premake-manager-cli")
+                connection
             );
+       
+            
 
             string? githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
@@ -65,22 +78,38 @@ namespace src
         {
             return $"https://github.com/{repo.owner}/{repo.name}/zipball/{refName}";
         }
-
+        internal static async Task<Repository> GetRepo(GithubRepo repo)
+        {
+            Repository repository = await Repositories.Get(repo.owner, repo.name);
+            return repository;
+        }
         internal static async Task<string> GetDescription(GithubRepo repo)
         {
-            //TODO add cache.
-            Repository repository = await Repositories.Get(repo.owner, repo.name);
-            return repository.Description;
+            return (await GetRepo(repo)).Description;
         }
         internal static async Task<IReadOnlyList<Release>> GetRepoVersions(GithubRepo repo)
         {
-            //TODO add cache.
-            return await Repositories.Release.GetAll(repo.owner, repo.name);
+            var releases = await Repositories.Release.GetAll(repo.owner, repo.name);
+            return releases;
+        }
+
+        internal static async Task<IReadOnlyList<GitHubCommit>> GetRepoCommits(GithubRepo repo)
+        {
+            var commits = await Repositories.Commit.GetAll(repo.owner, repo.name);
+            return commits;
         }
         internal static async Task<IReadOnlyList<RepositoryTag>> GetRepoTags(GithubRepo repo)
         {
-            //TODO add cache.
             return await Repositories.GetAllTags(repo.owner, repo.name);
+        }
+        internal static async Task<Octokit.RepositoryContent> GetAllContentsByRef(GithubRepo repo, string path, string branch)
+        {
+
+            return (await Github.Repositories.Content.GetAllContentsByRef(repo.owner, repo.name, path, branch))[0];
+        }
+        internal static async Task<IReadOnlyList<Branch>> GetBranches(GithubRepo repo)
+        {
+                return await _instance.Repository.Branch.GetAll(repo.owner, repo.name);
         }
     }
 }

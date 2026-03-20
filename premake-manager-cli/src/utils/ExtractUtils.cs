@@ -143,14 +143,14 @@ namespace src.utils
                 foreach (var entry in archive.Entries)
                 {
                     if (string.IsNullOrEmpty(entry.Name))
-                        return;
+                        continue;
 
                     string relativePath = commonPrefix != null && entry.FullName.StartsWith(commonPrefix)
                       ? entry.FullName.Substring(commonPrefix.Length)
                       : entry.FullName;
 
-                    string destinationPath = Path.Combine(destinationExtractDirectory, relativePath);
-                    string? destinationDir = Path.GetDirectoryName(destinationPath);
+                    string destinationPath = Path.Combine(destinationExtractDirectory, relativePath).Replace("\\", "/");
+                    string? destinationDir = Path.GetDirectoryName(destinationPath)!.Replace("\\", "/");
 
                     if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
                         Directory.CreateDirectory(destinationDir);

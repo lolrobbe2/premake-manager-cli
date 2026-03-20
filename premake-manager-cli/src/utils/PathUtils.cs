@@ -52,6 +52,11 @@ namespace src.utils
         {
             return Path.Combine(GetRoamingPath(), "remotes");
         }
+
+        public static string GetCachePath()
+        {
+            return Path.Combine(GetRoamingPath(), "cache");
+        }
         /// <summary>
         /// returns the Remote path for the given remote (owner,repo) with .zip or tar.gz path
         /// </summary>

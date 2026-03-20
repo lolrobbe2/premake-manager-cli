@@ -31,8 +31,6 @@ namespace src
                 {
                     // Extracts the part after "--session="
                     sessionToken = arg.Substring("--session=".Length).Trim('"');
-                    Console.WriteLine(sessionToken);
-
                     await Github.SetSession(sessionToken);
 
                 }
