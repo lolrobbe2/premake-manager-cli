@@ -41,7 +41,7 @@ namespace src.utils
             {
                 AddLib(lib);
             }
-            AddLibsEnd();
+            content.Add("    list = function() local c=0 for _,d in pairs(Libraries) do if type(d)=='table' then c=c+1 end end print('--- Libraries ('..c..') ---') for n,d in pairs(Libraries) do if type(d)=='table' then print(n..' version: '..d.version) end end print('----------------------- \\n') end,"); AddLibsEnd();
         }
         static void AddModules(PremakeModule[] modules)
         {
@@ -50,7 +50,7 @@ namespace src.utils
             {
                 AddModule(module);
             }
-            AddModulesEnd();
+            content.Add("    list = function() local c=0 for _,d in pairs(Modules) do if type(d)=='table' then c=c+1 end end print('--- Modules ('..c..') ---') for n,d in pairs(Modules) do if type(d)=='table' then print(n..' version: '..d.version) end end print('-----------------------\\n') end,"); AddModulesEnd();
         }
         static void AddLibsStart()
         {
