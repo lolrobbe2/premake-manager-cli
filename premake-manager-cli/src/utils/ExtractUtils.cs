@@ -111,6 +111,7 @@ namespace src.utils
 
         public static async Task ExtractZipProgressCtx(ProgressContext ctx, string sourcePath, string destinationExtractDirectory, string description, bool deleteSource = true)
         {
+
             ProgressTask extractTask = ctx.AddTask($"[green]{description}[/]");
 
             ProgressTaskSettings settings = new();

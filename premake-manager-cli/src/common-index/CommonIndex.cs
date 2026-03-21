@@ -40,12 +40,12 @@ namespace src.common_index
 
         public static MemoryStream? ReadLibraryFile(IndexView index, GithubRepo repo)
         {
-            if (index.libraries.TryGetValue(repo.owner, out IList<IndexLibrary>? libraries))
+            if (index.libraries.TryGetValue(repo.owner.ToLower(), out IList<IndexLibrary>? libraries))
             {
-                if (null == libraries.Where((lib) => lib.name == repo.name).FirstOrDefault())
+                if (null == libraries.Where((lib) => lib.name.ToLower() == repo.name.ToLower()).FirstOrDefault())
                     return null;
                 GithubRepo remote = Github.GetRepoFromLink(index.remote);
-                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{repo}-main/libraries/{repo.owner}/{repo.name}/premake5.lua".ToLower());
+                return ExtractUtils.ReadFile(PathUtils.GetRemotePath(remote.owner, remote.name), $"{remote.name}-main/libraries/{repo.owner}/{repo.name}/premake5.lua".ToLower());
             }
             return null; //could not find library.
         }
@@ -73,7 +73,7 @@ namespace src.common_index
             MemoryStream? stream = ReadLibraryFile(index, repo);
             if (stream == null) return false;
 
-            using (FileStream libraryFile = File.OpenWrite(await LibraryManager.GetLibraryPath(repo)))
+            using (FileStream libraryFile = File.OpenWrite(Path.Combine((await LibraryManager.GetLibraryPath(repo)).ToLower(), "premake5.lua")))
             {
                 stream.WriteTo(libraryFile);
             }

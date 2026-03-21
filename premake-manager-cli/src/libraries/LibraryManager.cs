@@ -104,7 +104,7 @@ namespace src.libraries
 
             string downloadUrl = await ResolveDownloadUrl(repo, version);
             await DownloadUtils.DownloadProgressCtx(ctx, downloadUrl, $"downloading {libconfig.name} library", Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"));
-            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), await GetLibraryPath(repo), $"extracting {libconfig.name}");
+            await ExtractUtils.ExtractZipProgressCtx(ctx, Path.Combine(PathUtils.GetTempModulePath(repo.name), $"{repo.name}.zip"), (await GetLibraryPath(repo)).ToLower(), $"extracting {libconfig.name}");
             await RemotesManager.InstallRemotesLibrary(repo);
             
         }
