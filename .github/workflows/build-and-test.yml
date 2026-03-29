@@ -2,7 +2,8 @@ name: Build and Test per Platform
 
 on:
   pull_request:
-
+  release:
+    types: [published]
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -74,3 +75,30 @@ jobs:
         # Optional: How long to keep the artifact (default 90 days)
         retention-days: 10
 
+upload-to-release:
+    if: github.event_name == 'release'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: all-artifacts # This downloads build-windows-latest, build-ubuntu-latest, etc.
+
+      - name: Prepare Assets for Release
+        run: |
+          mkdir assets
+          # Loop through the downloaded folders and rename files for clarity
+          # Windows
+          cp all-artifacts/build-windows-latest/premake-manager-cli.exe assets/premake-manager-cli-win.exe
+          # Linux
+          cp all-artifacts/build-ubuntu-latest/premake-manager-cli assets/premake-manager-cli-linux
+          # macOS
+          cp all-artifacts/build-macos-latest/premake-manager-cli assets/premake-manager-cli-darwin
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
