@@ -24,6 +24,8 @@ namespace src.utils
             AddPath(config.LibrariesPath,"libraries");
             AddLibs(libraries);
             AddModules(modules);
+            AddIncludeDirsSetFunction();
+            AddIncludeDirs();
             File.WriteAllText("premake-system.lua", string.Join("\n", content));
         }
         static void AddDisclaimer()
@@ -75,6 +77,23 @@ namespace src.utils
         static void AddModulesEnd()
         {
             content.Add($"}}");
+        }
+        static void AddIncludeDirsSetFunction()
+        {
+            content.Add(@"
+---INCLUDE_DIRS---
+local function setincludedirs(name, path)
+    IncludeDirs = IncludeDirs or {}
+    local cleanName = string.gsub(name, ""-"", ""_"")
+    IncludeDirs[cleanName] = _SCRIPT_DIR .. ""/"" .. path
+end
+");
+
+            content.Add("_G.setincludedirs = setincludedirs");
+        }
+        static void AddIncludeDirs()
+        {
+            content.Add("_G.IncludeDirs = {}");
         }
     }
 }

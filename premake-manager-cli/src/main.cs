@@ -15,7 +15,6 @@ namespace src
     {
         static async Task Main(string[] args)
         {
-            string sessionToken = "";
 #if DEBUG
             bool interactive = true;
 #else
@@ -27,14 +26,6 @@ namespace src
                 {
                     interactive = true;
                 }
-                if (arg.StartsWith("--session="))
-                {
-                    // Extracts the part after "--session="
-                    sessionToken = arg.Substring("--session=".Length).Trim('"');
-                    await Github.SetSession(sessionToken);
-
-                }
-
             }
            
             
