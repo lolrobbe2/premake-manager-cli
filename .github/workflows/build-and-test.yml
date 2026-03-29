@@ -1,5 +1,6 @@
 name: Build and Test per Platform
-
+permissions:
+  contents: write
 on:
   pull_request:
   release:
