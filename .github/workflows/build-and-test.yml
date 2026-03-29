@@ -77,7 +77,7 @@ jobs:
         # Optional: How long to keep the artifact (default 90 days)
         retention-days: 10
 
-upload-to-release:
+  upload-to-release:
     if: github.event_name == 'release'
     needs: build-and-test
     runs-on: ubuntu-latest
