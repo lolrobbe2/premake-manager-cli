@@ -3,8 +3,10 @@ permissions:
   contents: write
 on:
   pull_request:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
