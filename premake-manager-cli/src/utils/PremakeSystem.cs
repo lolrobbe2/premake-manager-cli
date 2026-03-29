@@ -81,12 +81,13 @@ namespace src.utils
         static void AddIncludeDirsSetFunction()
         {
             content.Add(@"
-            local function setincludedirs(name, path)
-                IncludeDirs = IncludeDirs or {}
-                local cleanName = string.gsub(name, ""-"", ""_"")
-                IncludeDirs[cleanName] = _SCRIPT_DIR .. ""/"" .. path
-            end
-            ");
+---INCLUDE_DIRS---
+local function setincludedirs(name, path)
+    IncludeDirs = IncludeDirs or {}
+    local cleanName = string.gsub(name, ""-"", ""_"")
+    IncludeDirs[cleanName] = _SCRIPT_DIR .. ""/"" .. path
+end
+");
 
             content.Add("_G.setincludedirs = setincludedirs");
         }
