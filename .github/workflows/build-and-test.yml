@@ -34,7 +34,8 @@ jobs:
         cache: true
         cache-dependency-path: ${{ github.workspace }}/premake-manager-cli
     - name: Installing premake5
-      uses: Jarod42/install-premake5@v6
+      uses: Jarod42/install-premake5@v7
+      ver
     - name: run premake5
       run: premake5 vs2026
     - name: Install dependencies
